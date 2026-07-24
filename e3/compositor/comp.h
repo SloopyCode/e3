@@ -24,6 +24,7 @@ void comp_fill(int x, int y, int w, int h, unsigned int color);
 void comp_set(int x, int y, unsigned int c);
 void comp_put_row(int x, int y, const unsigned int *row, int len);
 void comp_flush(void);
+void comp_flush_rect(int internal_x, int internal_y, int internal_width, int internal_height);
 
 void comp_copy_rect(
 	int src_x, int src_y,

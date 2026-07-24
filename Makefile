@@ -82,20 +82,20 @@ build/desktop.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBD
 	@cp libdesktop/libdesktop.h $(OS_LIBS)libdesktop.h
 
 
-build/desktop.o:                    src/desktop.c                   ; $(CC) $(CFLAGS) -c $< -o $@
-build/compositor/comp.o:            src/compositor/comp.c           ; $(CC) $(CFLAGS) -c $< -o $@
-build/bg/bmp/bmp.o:                 src/bg/bmp/bmp.c                ; $(CC) $(CFLAGS) -c $< -o $@
-build/bg/bg.o:                      src/bg/bg.c                     ; $(CC) $(CFLAGS) -c $< -o $@
-build/win/win.o:                    src/win/win.c                   ; $(CC) $(CFLAGS) -c $< -o $@
-build/desktop_input_dispatch.o:     src/desktop_input_dispatch.c    ; $(CC) $(CFLAGS) -c $< -o $@
-build/cursor/cursor.o:              src/cursor/cursor.c             ; $(CC) $(CFLAGS) -c $< -o $@
-build/render/render.o:              src/render/render.c             ; $(CC) $(CFLAGS) -c $< -o $@
-build/input/input.o:                src/input/input.c               ; $(CC) $(CFLAGS) -c $< -o $@
-build/fonts/fonts.o:                src/fonts/fonts.c               ; $(CC) $(CFLAGS) -c $< -o $@
-build/taskbar/taskbar.o:            src/taskbar/taskbar.c           ; $(CC) $(CFLAGS) -c $< -o $@
-build/taskbar/entries.o:            src/taskbar/entries.c           ; $(CC) $(CFLAGS) -c $< -o $@
-build/taskbar/startmenu.o:          src/taskbar/startmenu.c         ; $(CC) $(CFLAGS) -c $< -o $@
-build/cmd/cmd.o:                    src/cmd/cmd.c                   ; $(CC) $(CFLAGS) -c $< -o $@
+build/desktop.o:                    e3/desktop.c                   ; $(CC) $(CFLAGS) -c $< -o $@
+build/compositor/comp.o:            e3/compositor/comp.c           ; $(CC) $(CFLAGS) -c $< -o $@
+build/bg/bmp/bmp.o:                 e3/bg/bmp/bmp.c                ; $(CC) $(CFLAGS) -c $< -o $@
+build/bg/bg.o:                      e3/bg/bg.c                     ; $(CC) $(CFLAGS) -c $< -o $@
+build/win/win.o:                    e3/win/win.c                   ; $(CC) $(CFLAGS) -c $< -o $@
+build/desktop_input_dispatch.o:     e3/desktop_input_dispatch.c    ; $(CC) $(CFLAGS) -c $< -o $@
+build/cursor/cursor.o:              e3/cursor/cursor.c             ; $(CC) $(CFLAGS) -c $< -o $@
+build/render/render.o:              e3/render/render.c             ; $(CC) $(CFLAGS) -c $< -o $@
+build/input/input.o:                e3/input/input.c               ; $(CC) $(CFLAGS) -c $< -o $@
+build/fonts/fonts.o:                e3/fonts/fonts.c               ; $(CC) $(CFLAGS) -c $< -o $@
+build/taskbar/taskbar.o:            e3/taskbar/taskbar.c           ; $(CC) $(CFLAGS) -c $< -o $@
+build/taskbar/entries.o:            e3/taskbar/entries.c           ; $(CC) $(CFLAGS) -c $< -o $@
+build/taskbar/startmenu.o:          e3/taskbar/startmenu.c         ; $(CC) $(CFLAGS) -c $< -o $@
+build/cmd/cmd.o:                    e3/cmd/cmd.c                   ; $(CC) $(CFLAGS) -c $< -o $@
 
 $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:
 	$(MAKE) -C $(LIBC)

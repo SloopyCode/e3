@@ -75,22 +75,7 @@ void cur_init(int fb_fd, int w, int h)
 
 static void flush_rect(int x, int y, int w, int h)
 {
-    #if RENDERER_SCALING_ENABLED
-        (void)x;
-        (void)y;
-        (void)w;
-        (void)h;
-        comp_flush();
-    #else
-        fb_rect_t r =
-        {
-	        (unsigned)x,
-	        (unsigned)y,
-	        (unsigned)w,
-	        (unsigned)h
-        };
-        ioctl(g_fd, FB_IOCTL_FLUSH_RECT, &r);
-    #endif
+    comp_flush_rect(x, y, w, h);
 }
 
 void cur_undo_from_backbuf(void)
