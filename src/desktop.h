@@ -11,3 +11,5 @@
  */
 
 #pragma once
+
+void _itoa(int v, char *out);

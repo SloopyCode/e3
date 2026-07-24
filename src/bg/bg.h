@@ -13,7 +13,7 @@
 #pragma once
 
 #include "../config/cfg.h"
-#define BG_PATH SYSTEM "/background/1.bmp"
+#define BG_PATH SYSTEM "background/2.bmp"
 
 void bg_init(int w, int h);
 void bg_draw_full(void);

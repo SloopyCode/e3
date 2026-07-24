@@ -14,6 +14,9 @@
 #include <sys/fb.h>
 #include <unistd.h>
 #include <stdio.h>
+#include "../config/cfg.h"
+#include <stdlib.h>
+#include <string.h>
 
 static int g_fd = -1;
 static int g_w = 0;
@@ -21,6 +24,13 @@ static int g_h = 0;
 static unsigned int *g_buf = 0;
 static unsigned int g_stride = 0;
 static unsigned int *g_buf_shadow = 0;
+
+static int g_real_fd = -1;
+static int g_physical_width = 0;
+static int g_physical_height = 0;
+static unsigned int g_physical_stride = 0;
+static unsigned int *g_real_fb_buffer = 0;
+static unsigned int *g_internal_render_surface = 0;
 
 // fixed by @offihito
 
@@ -38,22 +48,80 @@ static void check_g_buf(const char *where)
     g_buf_shadow = g_buf;
 }
 
-void comp_init(int fb_fd, int w, int h) {
-	(void)w;
-    (void)h;
-    g_fd = fb_fd;
+void comp_init(int framebuffer_file_descriptor, int requested_internal_width, int requested_internal_height)
+{
+	printf(":: comp: starting...\n");
 
-    fb_info_t info;
-    if (ioctl(g_fd, FB_IOCTL_GET_INFO, &info) < 0) return;
+    fb_info_t framebuffer_information_structure;
+    unsigned long mapped_virtual_address;
 
-    g_w = (int)info.width;
-    g_h = (int)info.height;
-    g_stride = info.pitch / 4;
+    g_fd = framebuffer_file_descriptor;
+    g_real_fd = framebuffer_file_descriptor;
 
-    unsigned long vaddr = 0;
-    if (ioctl(g_fd, FB_IOCTL_MAP, &vaddr) < 0) return;
+    if (ioctl(g_real_fd, FB_IOCTL_GET_INFO, &framebuffer_information_structure) < 0)
+    {
+        return;
+    }
 
-    g_buf = (unsigned int *)vaddr;
+    g_physical_width = (int)framebuffer_information_structure.width;
+    g_physical_height = (int)framebuffer_information_structure.height;
+    g_physical_stride = framebuffer_information_structure.pitch / 4;
+
+    mapped_virtual_address = 0;
+    if (ioctl(g_real_fd, FB_IOCTL_MAP, &mapped_virtual_address) < 0)
+    {
+        return;
+    }
+
+    g_real_fb_buffer = (unsigned int *)mapped_virtual_address;
+
+    #if RENDERER_SCALING_ENABLED
+    	printf(":: comp: rendered scaling is enabled!\n");
+	    g_w = requested_internal_width;
+	    g_h = requested_internal_height;
+	    g_stride = (unsigned int)requested_internal_width;
+
+	    if (g_internal_render_surface)
+	    {
+	        free(g_internal_render_surface);
+	    }
+		g_internal_render_surface = (unsigned int *)malloc(
+    		(unsigned int)(g_w * g_h * sizeof(unsigned int))
+		);
+
+		if (!g_internal_render_surface)
+		{
+		    printf(
+				":: comp: internal_render_surface allocation failed\n"
+				"   we will fall back to real framebuffer :(\n"
+			);
+
+		    g_w = g_physical_width;
+		    g_h = g_physical_height;
+		    g_stride = g_physical_stride;
+		    g_buf = g_real_fb_buffer;
+
+		    return;
+		}
+
+        if (g_internal_render_surface)
+        {
+		    memset(
+				g_internal_render_surface,
+				0,
+				(unsigned int)(g_w * g_h * sizeof(unsigned int))
+		    );
+        }
+
+	    g_buf = g_internal_render_surface;
+    #else
+	    g_w = g_physical_width;
+	    g_h = g_physical_height;
+	    g_stride = g_physical_stride;
+	    g_buf = g_real_fb_buffer;
+    #endif
+
+    g_buf_shadow = g_buf;
 }
 
 void comp_capture(void)
@@ -205,11 +273,171 @@ void comp_put_pixels(
     }
 }
 
+static void bilinear_scale_framebuffer_pixels(
+    const unsigned int *source_pixels_pointer,
+    int source_width_pixels,
+    int source_height_pixels,
+    unsigned int *destination_pixels_pointer,
+    int destination_width_pixels,
+    int destination_height_pixels,
+    unsigned int destination_stride_pixels
+)
+{
+	// i think its better if i do more detailed variable names... even tho its shitty to type then... but otherwise im too dumb for this math TwT
+    int x;
+    int y;
+    float horizontal_ratio_factor;
+    float vertical_ratio_factor;
+
+    /*standard math stuff to blend pixels together
+     * so it doesn't look like we're playing Doom on a fkin toaster */
+    if (source_width_pixels <= 0 || source_height_pixels <= 0 || destination_width_pixels <= 0 || destination_height_pixels <= 0)
+    {
+        return;
+    }
+
+    horizontal_ratio_factor = (float)source_width_pixels / (float)destination_width_pixels;
+    vertical_ratio_factor = (float)source_height_pixels / (float)destination_height_pixels;
+
+    for (y = 0; y < destination_height_pixels; y++)
+    {
+        float source_y_coordinate = ((float)y + 0.5f) * vertical_ratio_factor - 0.5f;
+        if (source_y_coordinate < 0.0f)
+        {
+            source_y_coordinate = 0.0f;
+        }
+        if (source_y_coordinate > (float)(source_height_pixels - 1))
+        {
+            source_y_coordinate = (float)(source_height_pixels - 1);
+        }
+
+        for (x = 0; x < destination_width_pixels; x++)
+        {
+            float source_x_coordinate = ((float)x + 0.5f) * horizontal_ratio_factor - 0.5f;
+            if (source_x_coordinate < 0.0f)
+            {
+                source_x_coordinate = 0.0f;
+            }
+            if (source_x_coordinate > (float)(source_width_pixels - 1))
+            {
+                source_x_coordinate = (float)(source_width_pixels - 1);
+            }
+
+            int source_left_index = (int)source_x_coordinate;
+            int source_top_index = (int)source_y_coordinate;
+
+            int source_right_index = source_left_index + 1;
+            if (source_right_index >= source_width_pixels)
+            {
+                source_right_index = source_width_pixels - 1;
+            }
+
+            int source_bottom_index = source_top_index + 1;
+            if (source_bottom_index >= source_height_pixels)
+            {
+                source_bottom_index = source_height_pixels - 1;
+            }
+
+            float horizontal_weight_fraction = source_x_coordinate - (float)source_left_index;
+            float vertical_weight_fraction = source_y_coordinate - (float)source_top_index;
+
+            float opposite_horizontal_weight = 1.0f - horizontal_weight_fraction;
+            float opposite_vertical_weight = 1.0f - vertical_weight_fraction;
+
+            float top_left_weight = opposite_horizontal_weight * opposite_vertical_weight;
+            float top_right_weight = horizontal_weight_fraction * opposite_vertical_weight;
+            float bottom_left_weight = opposite_horizontal_weight * vertical_weight_fraction;
+            float bottom_right_weight = horizontal_weight_fraction * vertical_weight_fraction;
+
+            unsigned int top_left_pixel = source_pixels_pointer[source_top_index * source_width_pixels + source_left_index];
+            unsigned int top_right_pixel = source_pixels_pointer[source_top_index * source_width_pixels + source_right_index];
+            unsigned int bottom_left_pixel = source_pixels_pointer[source_bottom_index * source_width_pixels + source_left_index];
+            unsigned int bottom_right_pixel = source_pixels_pointer[source_bottom_index * source_width_pixels + source_right_index];
+
+            unsigned int top_left_alpha = (top_left_pixel >> 24) & 0xFF;
+            unsigned int top_left_red   = (top_left_pixel >> 16) & 0xFF;
+            unsigned int top_left_green = (top_left_pixel >> 8) & 0xFF;
+            unsigned int top_left_blue  = top_left_pixel & 0xFF;
+
+            unsigned int top_right_alpha = (top_right_pixel >> 24) & 0xFF;
+            unsigned int top_right_red   = (top_right_pixel >> 16) & 0xFF;
+            unsigned int top_right_green = (top_right_pixel >> 8) & 0xFF;
+            unsigned int top_right_blue  = top_right_pixel & 0xFF;
+
+            unsigned int bottom_left_alpha = (bottom_left_pixel >> 24) & 0xFF;
+            unsigned int bottom_left_red   = (bottom_left_pixel >> 16) & 0xFF;
+            unsigned int bottom_left_green = (bottom_left_pixel >> 8) & 0xFF;
+            unsigned int bottom_left_blue  = bottom_left_pixel & 0xFF;
+
+            unsigned int bottom_right_alpha = (bottom_right_pixel >> 24) & 0xFF;
+            unsigned int bottom_right_red   = (bottom_right_pixel >> 16) & 0xFF;
+            unsigned int bottom_right_green = (bottom_right_pixel >> 8) & 0xFF;
+            unsigned int bottom_right_blue  = bottom_right_pixel & 0xFF;c
+
+            unsigned int interpolated_alpha = (unsigned int)(
+                (float)top_left_alpha * top_left_weight +
+                (float)top_right_alpha * top_right_weight +
+                (float)bottom_left_alpha * bottom_left_weight +
+                (float)bottom_right_alpha * bottom_right_weight +
+                0.5f
+            );
+            unsigned int interpolated_red = (unsigned int)(
+                (float)top_left_red * top_left_weight +
+                (float)top_right_red * top_right_weight +
+                (float)bottom_left_red * bottom_left_weight +
+                (float)bottom_right_red * bottom_right_weight +
+                0.5f
+            );
+            unsigned int interpolated_green = (unsigned int)(
+                (float)top_left_green * top_left_weight +
+                (float)top_right_green * top_right_weight +
+                (float)bottom_left_green * bottom_left_weight +
+                (float)bottom_right_green * bottom_right_weight +
+                0.5f
+            );
+            unsigned int interpolated_blue = (unsigned int)(
+                (float)top_left_blue * top_left_weight +
+                (float)top_right_blue * top_right_weight +
+                (float)bottom_left_blue * bottom_left_weight +
+                (float)bottom_right_blue * bottom_right_weight +
+                0.5f
+            );
+
+            destination_pixels_pointer[
+                (unsigned int)y * destination_stride_pixels + (unsigned int)x
+            ] =
+                (interpolated_alpha << 24) |
+                (interpolated_red << 16) |
+                (interpolated_green << 8) |
+                interpolated_blue;
+        }
+    }
+}
+
 void comp_flush(void)
 {
-	check_g_buf(__func__);
-    if (!g_buf || g_fd < 0) return;
-    ioctl(g_fd, FB_IOCTL_FLUSH, 0);
+    check_g_buf(__func__);
+    if (!g_buf || g_real_fd < 0)
+    {
+        return;
+    }
+
+    #if RENDERER_SCALING_ENABLED
+	    if (g_internal_render_surface && g_real_fb_buffer)
+	    {
+			bilinear_scale_framebuffer_pixels(
+			    g_internal_render_surface,
+			    g_w,
+			    g_h,
+			    g_real_fb_buffer,
+			    g_physical_width,
+			    g_physical_height,
+			    g_physical_stride
+			);
+	    }
+    #endif
+
+    ioctl(g_real_fd, FB_IOCTL_FLUSH, 0);
 }
 
 int comp_w(void) {

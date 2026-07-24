@@ -11,6 +11,7 @@
  */
 
 #include "taskbar.h"
+#include "startmenu.h"
 #include "entries.h"
 #include "dt_taskbar.h"
 #include "../compositor/comp.h"
@@ -73,7 +74,8 @@ static void _itoa(int v, char *out)
 
 static int _atoi(const char *s)
 {
-    int v = 0, neg = 0;
+    int v = 0;
+    int neg = 0;
     while (*s == ' ') s++;
 
     if (*s == '-')
@@ -107,9 +109,27 @@ static const char *_next_tok(const char **p, char *out, int outsz)
     return out;
 }
 
+
+
+static int start_btn_x(void)
+{
+    return TB_BTN_PAD;
+}
+
 static int btn_x(int i)
 {
-    return TB_BTN_PAD + i * (TB_BTN_W + TB_BTN_PAD);
+    return TB_BTN_PAD + TB_START_W + TB_BTN_PAD + i * (TB_BTN_W + TB_BTN_PAD);
+}
+
+static int hit_start_btn(int mx, int my)
+{
+    int bx = start_btn_x();
+    int by = s_tb_y + TB_BTN_VPAD;
+    int bh = TB_H - TB_BTN_VPAD * 2;
+    return
+    	mx >= bx && mx < bx + TB_START_W &&
+        my >= by && my < by + bh
+    ;
 }
 
 static int hit_btn(int i, int mx, int my)
@@ -123,25 +143,6 @@ static int hit_btn(int i, int mx, int my)
     ;
 }
 
-static int power_btn_x(void)
-{
-    return s_scr_w - TB_POWER_W - TB_BTN_PAD;
-}
-
-static int hit_power_btn(int mx, int my)
-{
-    int bx = power_btn_x();
-    int by = s_tb_y + TB_BTN_VPAD;
-    int bh = TB_H - TB_BTN_VPAD * 2;
-
-    return
-    	mx >= bx &&
-     	mx < bx + TB_POWER_W &&
-        my >= by &&
-        my < by + bh
-    ;
-}
-
 static int file_exists(const char *path)
 {
     long fd = open(path, O_RDONLY);
@@ -150,22 +151,6 @@ static int file_exists(const char *path)
     close((int)fd);
 
     return 1;
-}
-
-static void launch_poweroff(void)
-{
-    if (!file_exists(POWEROFF_LAUNCHPAD_PATH)) return;
-
-    pid_t pid = fork();
-    if (pid == 0)
-    {
-        char *argv[] = { POWEROFF_LAUNCHPAD_PATH, (char *)0 };
-        char *envp[] = { (char *)0 };
-
-        printf("[TASKBAR] launching poweroff via '%s'\n", POWEROFF_LAUNCHPAD_PATH);
-        execve(POWEROFF_LAUNCHPAD_PATH, argv, envp);
-        _exit(1);
-    }
 }
 
 static void popup_pos(int i, int pw, int ph, int *out_x, int *out_y)
@@ -243,6 +228,8 @@ void taskbar_init(int scr_w, int scr_h)
       	i++
     ) s_widgets[s_widget_count++] = entries[i];
 
+    startmenu_init(scr_w, scr_h);
+
     //TODO:
     // clock widget
 }
@@ -259,6 +246,54 @@ int taskbar_add_widget(const tb_widget_t *w)
     return s_widget_count++;
 }
 
+static void draw_start_button(int y, int mx, int my, int btn_down)
+{
+    int bx    = start_btn_x();
+    int by    = y + TB_BTN_VPAD;
+    int bh    = TB_H - (TB_BTN_VPAD * 2);
+    int hov   = hit_start_btn(mx, my);
+    /* also show as pressed when menu is open */
+    int press = (hov && btn_down) || startmenu_is_open();
+
+    comp_fill(bx, by, TB_START_W, bh, TB_BUTTON_BG);
+
+    if (hov || press)
+    {
+        unsigned int col = press ? TB_BTN_TOP : TB_LIGHT;
+
+        comp_fill(bx,                         by, TB_START_W, TB_BORDER_W, col);
+        comp_fill(bx, by + bh - TB_BORDER_W,     TB_START_W, TB_BORDER_W, col);
+        comp_fill(bx,                         by, TB_BORDER_W, bh,         col);
+        comp_fill(bx + TB_START_W - TB_BORDER_W, by, TB_BORDER_W, bh,     col);
+
+        comp_fill(bx, by, TB_START_W, bh, TB_BUTTON_BG);
+        comp_fill(bx, by, TB_START_W, 2,  TB_TOP_BORDER);
+    }
+
+    const char *label = "start";
+    int fw2  = font_w(FONT8X12_BOLD);
+    int fh2  = font_h(FONT8X12_BOLD);
+    int nlen = _slen(label);
+    int tw   = nlen * fw2;
+    int tx   = bx + (TB_START_W - tw) / 2;
+    int ty   = by + (bh - fh2)  / 2;
+
+    for (int ci = 0; ci < nlen; ci++)
+    {
+        unsigned char c = (unsigned char)label[ci] & 0x7Fu;
+        for (int row = 0; row < fh2; row++)
+        {
+            uint16_t bits = font_glyph(FONT8X12_BOLD, c, row);
+            for (int col = 0; col < fw2; col++)
+            {
+                unsigned int bg_col = TB_BUTTON_BG;
+                unsigned int color  = (bits & (1u << col)) ? TB_WHITE : bg_col;
+                comp_set(tx + ci * fw2 + col, ty + row, color);
+            }
+        }
+    }
+}
+
 void taskbar_draw(int mx, int my, int btn_down)
 {
     int y  = s_tb_y;
@@ -270,54 +305,7 @@ void taskbar_draw(int mx, int my, int btn_down)
     // top border line
     comp_fill(0, y, w, 1, TB_TOP_BORDER);
 
-    int fw = font_w(FONT8X12_BOLD);
-    int fh = font_h(FONT8X12_BOLD);
-
-    {
-        int bx  = power_btn_x();
-        int by  = y + TB_BTN_VPAD;
-        int bh  = TB_H - (TB_BTN_VPAD * 2);
-        int hov = hit_power_btn(mx, my);
-        int press = hov && btn_down;
-
-        comp_fill(bx, by, TB_POWER_W, bh, TB_BACKGROUND);
-
-        if (hov || press)
-        {
-            unsigned int col = press ? TB_BTN_TOP : TB_LIGHT;
-
-            comp_fill(bx, by, TB_POWER_W, TB_BORDER_W, col);
-            comp_fill(bx, by + bh - TB_BORDER_W, TB_POWER_W, TB_BORDER_W, col);
-            comp_fill(bx, by, TB_BORDER_W, bh, col);
-            comp_fill(bx + TB_POWER_W - TB_BORDER_W, by, TB_BORDER_W, bh, col);
-            comp_fill(bx, by, TB_POWER_W, bh, TB_BUTTON_BG);
-
-            if (hov || press) comp_fill(bx, by, TB_POWER_W, 2, TB_TOP_BORDER);
-        }
-
-        const char *label = "power";
-        int nlen = _slen(label);
-        int fw2 = font_w(FONT8X12_BOLD);
-        int fh2 = font_h(FONT8X12_BOLD);
-        int tw = nlen * fw2;
-        int tx = bx + (TB_POWER_W - tw) / 2;
-        int ty = by + (bh - fh2) / 2;
-
-        for (int ci = 0; ci < nlen; ci++)
-        {
-            unsigned char c = (unsigned char)label[ci] & 0x7Fu;
-            for (int row = 0; row < fh2; row++)
-            {
-                uint16_t bits = font_glyph(FONT8X12_BOLD, c, row);
-                for (int col = 0; col < fw2; col++)
-                {
-                    unsigned int bg_col = (hov || press) ? TB_BUTTON_BG : TB_BACKGROUND;
-                    unsigned int color = (bits & (1u << col)) ? TB_WHITE : bg_col;
-                    comp_set(tx + ci * fw2 + col, ty + row, color);
-                }
-            }
-        }
-    }
+    draw_start_button(y, mx, my, btn_down);
 
     for (int i = 0; i < s_widget_count; i++)
     {
@@ -446,15 +434,28 @@ void taskbar_draw(int mx, int my, int btn_down)
             }
         }
     }
+
+    startmenu_draw(mx, my, btn_down);
 }
 
 int taskbar_click(int mx, int my)
 {
+    if (startmenu_is_open())
+    {
+        int consumed = startmenu_click(mx, my);
+        if (consumed) return 1;
+
+        startmenu_close();
+    }
+
     if (my < s_tb_y) return 0;
 
-    if (hit_power_btn(mx, my))
+    if (hit_start_btn(mx, my))
     {
-        launch_poweroff();
+        startmenu_toggle(
+        	start_btn_x(),
+         	s_tb_y
+        );
         return 1;
     }
 

@@ -63,11 +63,12 @@
 #define TB_ENTRY_NAMELEN 32
 #define TB_ENTRY_EXECLEN 64
 #define TB_MAX_ENTRIES 10
-#define TB_POWER_W 60
+#define TB_START_W 60
 
 #define MAX_APPICON_SIZE 22
 
 #define POWEROFF_LAUNCHPAD_PATH "/bin/poweroff.elf"
+#define REBOOT_LAUNCHPAD_PATH "/bin/reboot.elf"
 
 #if DARK_MODE == 1
 	#define TB_BACKGROUND  0xFF202020u
@@ -107,7 +108,17 @@
 	#define WIN_UNFOCUSED_BG    0xFF000000u
 #endif
 
-#define DT_ENABLE_RESIZING 0
+#define SM_W          180
+#define SM_H          80
+#define SM_MARGIN     2
+
+#define SM_BTN_H      (TB_H - TB_BTN_VPAD * 2)
+#define SM_BTN_W      ((SM_W - TB_BTN_PAD * 3) / 2)
+#define SM_BTN_PAD    TB_BTN_PAD
+
+#define SM_BTN_ROW_Y  (SM_H - SM_BTN_H - SM_BTN_PAD)
+
+#define DT_ENABLE_RESIZING 1
 
 // window title bar
 #define DT_TITLE_ACT 0xFFB0D0C0u  // green; when focused
@@ -127,3 +138,7 @@
 // font rendering
 #define DT_FW 8
 #define DT_FH 12
+
+// scaling settings
+#define RENDERER_SCALING_ENABLED 1
+#define RENDERER_SUPERSAMPLING_FACTOR 2

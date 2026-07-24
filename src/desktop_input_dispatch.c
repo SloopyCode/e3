@@ -11,6 +11,7 @@
  */
 
 #include "desktop_input_dispatch.h"
+#include "desktop.h"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -25,26 +26,6 @@ void dt_set_screen_size(int w, int h)
 {
     g_scr_w = w;
     g_scr_h = h;
-}
-
-static void _itoa(int v, char *out)
-{
-    char tmp[16];
-    int i = 0;
-    int j = 0;
-
-    if (v == 0) {
-    	out[0] = '0';
-     	out[1] = '\0';
-      	return;
-    }
-    while (v > 0) {
-    	tmp[i++] = '0' + v % 10;
-     	v /= 10;
-    }
-    while (i > 0) out[j++] = tmp[--i];
-
-    out[j]='\0';
 }
 
 static void _pid_path(pid_t pid, char *out)
@@ -68,7 +49,8 @@ void dt_dispatch_event(pid_t focused_pid, const dt_event_t *ev)
 {
     if (focused_pid<=0||!ev) return;
 
-    char path[64]; _pid_path(focused_pid, path);
+    char path[64];
+    _pid_path(focused_pid, path);
 
     static unsigned char raw[DT_QUEUE_BYTES];
     int count = 0;

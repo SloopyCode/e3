@@ -41,7 +41,7 @@ static int _slen(const char *s)
 	return n;
 }
 
-static void _itoa(int v, char *out)
+void _itoa(int v, char *out)
 {
     char tmp[16];
     int i = 0;
@@ -147,31 +147,34 @@ static void sync_home_to_current(void)
         if (!w) continue;
 
         int cx, cy, cw, ch;
+        int ox, oy, ow, oh;
+        int nox, noy, now_, noh;
+
         current_content(w, &cx, &cy, &cw, &ch);
 
         // if window hasn't moved or resized, nothing to do
         if (cx == w->home_cx && cy == w->home_cy && cw == w->home_cw && ch == w->home_ch) continue;
 
-        int ox, oy, ow, oh;
         _old_full_rect(
             w, w->home_cx, w->home_cy, w->home_cw, w->home_ch,
             &ox, &oy, &ow, &oh
         );
-        int nox, noy, now_, noh;
         _old_full_rect(w, cx, cy, cw, ch, &nox, &noy, &now_, &noh);
         {
             int ix0 = ox > nox ? ox : nox;
             int iy0 = oy > noy ? oy : noy;
             int ix1 = (ox+ow)<(nox+now_) ? (ox+ow) : (nox+now_);
             int iy1 = (oy+oh)<(noy+noh) ? (oy+oh) : (noy+noh);
-            if (ix0 >= ix1 || iy0 >= iy1) {
+
+            if (ix0 >= ix1 || iy0 >= iy1)
+            {
                 bg_draw_rect(ox, oy, ow, oh);
-            } else {
-                if (oy < iy0)
-                    bg_draw_rect(ox, oy, ow, iy0-oy);
-                if (oy+oh > iy1)
-                    bg_draw_rect(ox, iy1, ow, (oy+oh)-iy1);
-                if (iy0 < iy1) {
+            } else
+            {
+                if (oy < iy0) bg_draw_rect(ox, oy, ow, iy0-oy);
+                if (oy+oh > iy1) bg_draw_rect(ox, iy1, ow, (oy+oh)-iy1);
+                if (iy0 < iy1)
+                {
                     if (ox < ix0)
                         bg_draw_rect(ox, iy0, ix0-ox, iy1-iy0);
                     if (ox+ow > ix1)
@@ -211,14 +214,28 @@ static void clear_cmd_rects(cmd_result_t *cr)
 
 static void _build_wbuf_path(char *out, pid_t pid)
 {
-    const char *pfx = DT_WBUF_PREFIX;
     int i = 0;
-    while (*pfx) out[i++] = *pfx++;
     char tmp[12];
     int ti = 0;
     unsigned int p = (unsigned int)pid;
-    if (!p) { tmp[ti++] = '0'; }
-    else { while (p) { tmp[ti++] = '0' + p % 10; p /= 10; } }
+
+    const char *pfx = DT_WBUF_PREFIX;
+
+    while (*pfx) out[i++] = *pfx++;
+
+    if (!p)
+    {
+    	tmp[ti++] = '0';
+    }
+    else
+    {
+    	while (p)
+     	{
+      		tmp[ti++] = '0' + p % 10;
+        	p /= 10;
+      	}
+    }
+
     while (ti > 0) out[i++] = tmp[--ti];
     out[i] = '\0';
 }
@@ -243,7 +260,8 @@ static void refresh_win_bufs(void)
     int header[2];
     int i;
 
-    for (i = 0; i < DT_WIN_MAX; i++) {
+    for (i = 0; i < DT_WIN_MAX; i++)
+    {
         dt_win_t *wn = win_get(i);
         if (!wn) continue;
 
@@ -252,23 +270,44 @@ static void refresh_win_bufs(void)
         int fd = open(path, O_RDONLY);
         if (fd < 0) continue;
 
-        if (_read_exact_d(fd, header, 8) != 0) { close(fd); continue; }
+        if (_read_exact_d(fd, header, 8) != 0)
+        {
+        	close(fd);
+         	continue;
+        }
 
         int bw = header[0], bh = header[1];
-        if (bw <= 0 || bh <= 0 || bw > 4096 || bh > 4096) { close(fd); continue; }
+        if (bw <= 0 || bh <= 0 || bw > 4096 || bh > 4096)
+        {
+        	close(fd);
+         	continue;
+        }
 
         // reallocate buffer if size changed
-        if (wn->buf && (wn->buf_w != bw || wn->buf_h != bh)) {
+        if (wn->buf && (wn->buf_w != bw || wn->buf_h != bh))
+        {
             free(wn->buf);
             wn->buf = (unsigned int *)malloc((unsigned)(bw * bh * 4));
-            if (!wn->buf) { wn->buf_w = 0; wn->buf_h = 0; close(fd); continue; }
+            if (!wn->buf)
+            {
+	            wn->buf_w = 0;
+	            wn->buf_h = 0;
+
+	            close(fd);
+	            continue;
+            }
             wn->buf_w = bw;
             wn->buf_h = bh;
         }
         // allocate fresh
         if (!wn->buf) {
             wn->buf = (unsigned int *)malloc((unsigned)(bw * bh * 4));
-            if (!wn->buf) { close(fd); continue; }
+            if (!wn->buf)
+            {
+            	close(fd);
+             	continue;
+            }
+
             wn->buf_w = bw;
             wn->buf_h = bh;
         }
@@ -332,24 +371,26 @@ static void render_band(input_state_t *is)
 
 int main(void)
 {
-	printf("\n Welcome to e3!\n");
+	printf("\n:: loading e3...\n");
+
+	printf(":: mkdir " DT_DIR "...\n");
 	mkdir(DT_DIR, 0);
-	printf("mkdir " DT_DIR "...\n");
 
     int fd;
-    printf("test1\n");
     fd = open(DT_CMD, O_WRONLY | O_CREAT); if (fd >= 0) close(fd);
     fd = open(DT_DIRTY, O_WRONLY | O_CREAT);
     if (fd >= 0) close(fd);
 
 
-    printf("reading framebuffer + mouse");
+    printf(":: reading framebuffer...\n");
     int fb = open(FRAMEBUFFER_DEV, O_RDWR);
+    printf(":: reading mouse...\n");
     int mfd = open(MOUSE_DEV, O_RDONLY);
 
     if (fb < 0 || mfd < 0) return 1;
 
     fb_info_t info;
+    printf(":: reading fbinfo...\n");
     ioctl(fb, FB_IOCTL_GET_INFO, &info);
 
     int scr_w = (int)info.width;
@@ -360,20 +401,33 @@ int main(void)
     if (scr_w <= 0) scr_w = 1024;
     if (scr_h <= 0) scr_h = 768;
 
-    input_set_screen_size(scr_w, scr_h);
+    int internal_w = scr_w;
+    int internal_h = scr_h;
+    #if RENDERER_SCALING_ENABLED
+        internal_w = scr_w + scr_w / 2;
+        internal_h = scr_h + scr_h / 2;
+    #endif
+
+    input_set_screen_size(internal_w, internal_h);
     input_init();
 
-    comp_init(fb, scr_w, scr_h);
-    bg_init(scr_w, scr_h);
-    cur_init(fb, scr_w, scr_h);
-    taskbar_init(scr_w, scr_h);
+    comp_init(fb, internal_w, internal_h);
+    bg_init(internal_w, internal_h);
+    cur_init(fb, internal_w, internal_h);
+    taskbar_init(internal_w, internal_h);
 
     bg_draw_full();
     comp_flush();
 
+    printf(
+    	"loading e3 was a success!\n"
+     	"Welcome to e3!\n\n"
+    );
+
     input_state_t is;
-    is.cx = scr_w / 2;
-    is.cy = scr_h / 2;
+    is.cx = internal_w / 2;
+    is.cy = internal_h / 2;
+
 
     is.win_changed = 0;
     is.sel_active = 0;
@@ -386,21 +440,27 @@ int main(void)
     write_cursor_pos(is.cx, is.cy);
 
     int poll_tick = 0;
+    int first_frame = 1;
 
     #define POLL_INTERVAL 4
 
     for (;;)
     {
         int need_full = 0;
+        if (first_frame)
+        {
+            need_full = 1;
+            first_frame = 0;
+        }
         int need_cur  = 0;
-
+        int app_dirty = 0;
         cmd_result_t cr;
+
         cr.count = 0;
         cr.win_changed = 0;
 
         poll_tick++;
 
-        int app_dirty = 0;
         if (poll_tick >= POLL_INTERVAL)
         {
             poll_tick = 0;
@@ -460,7 +520,7 @@ int main(void)
 
         if (!need_full && !need_cur)
         {
-            for (volatile int i = 0; i < 500; i++)
+            for (volatile int i = 0; i < 50; i++)
                 __asm__ volatile("pause");
         }
     }

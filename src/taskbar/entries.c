@@ -37,7 +37,7 @@ static tb_widget_t s_entries[] =
         .name          = "DOOM",
         .text          = "DOOM",
         .exec          = "/bin/doomgeneric.elf",
-        .icon_path     = "/system/desktop/icons/dir.bmp",
+        .icon_path     = "/system/desktop/icons/doom.bmp",
         .icon          = { .loaded = 0 },
         .popup_pid     = -1,
         .popup_w       = 0,

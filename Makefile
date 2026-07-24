@@ -41,7 +41,8 @@ OBJS := build/desktop.o \
         build/input/input.o \
         build/fonts/fonts.o \
         build/taskbar/taskbar.o \
-        build/taskbar/entries.o
+        build/taskbar/entries.o \
+        build/taskbar/startmenu.o
 
 all: clean $(LIBC)/build/crt0.o dirs build/desktop.elf run
 
@@ -93,6 +94,7 @@ build/input/input.o:                src/input/input.c               ; $(CC) $(CF
 build/fonts/fonts.o:                src/fonts/fonts.c               ; $(CC) $(CFLAGS) -c $< -o $@
 build/taskbar/taskbar.o:            src/taskbar/taskbar.c           ; $(CC) $(CFLAGS) -c $< -o $@
 build/taskbar/entries.o:            src/taskbar/entries.c           ; $(CC) $(CFLAGS) -c $< -o $@
+build/taskbar/startmenu.o:          src/taskbar/startmenu.c         ; $(CC) $(CFLAGS) -c $< -o $@
 build/cmd/cmd.o:                    src/cmd/cmd.c                   ; $(CC) $(CFLAGS) -c $< -o $@
 
 $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:

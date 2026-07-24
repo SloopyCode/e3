@@ -15,6 +15,8 @@
 #include "../cursor/cursor.h"
 #include "../desktop_input_dispatch.h"
 #include "../taskbar/taskbar.h"
+#include "../taskbar/startmenu.h"
+#include "../config/cfg.h"
 
 #include <unistd.h>
 
@@ -170,6 +172,7 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
 	        g_last_btn = btn;
 	        return 0;
 	    }
+        if (startmenu_is_open()) startmenu_close();
         int top_idx = -1, top_z = -1;
         for (int i = 0; i < DT_WIN_MAX; i++)
         {
@@ -400,10 +403,17 @@ int input_drain(int mfd, input_state_t *is)
     {
         //if (handle_one(&ev, is)) is->win_changed = 1;
         got = 1;
-        if (ev.type == INPUT_EV_REL) {
-            if (ev.code == INPUT_REL_X) mx += ev.value;
-            if (ev.code == INPUT_REL_Y) my += ev.value;
-        } else if (ev.type == INPUT_EV_KEY) {
+        if (ev.type == INPUT_EV_REL)
+        {
+            #if RENDERER_SCALING_ENABLED
+	            if (ev.code == INPUT_REL_X) mx += ev.value * RENDERER_SUPERSAMPLING_FACTOR;
+	            if (ev.code == INPUT_REL_Y) my += ev.value * RENDERER_SUPERSAMPLING_FACTOR;
+            #else
+	            if (ev.code == INPUT_REL_X) mx += ev.value;
+	            if (ev.code == INPUT_REL_Y) my += ev.value;
+            #endif
+        } else if (ev.type == INPUT_EV_KEY)
+        {
             if (ev.code == INPUT_BTN_LEFT)  btn_left = ev.value;
         }
     }

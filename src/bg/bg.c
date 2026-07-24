@@ -29,46 +29,46 @@ void bg_init(int w, int h)
 
     const char *path = BG_PATH;
 
-    printf(":: bg: trying to load bg picture from path: %s\n", path);
+    printf(":: bg: loading bg picture from path: %s\n", path);
 
     int res = bmp_load(path, &g_bg);
 
-    printf("[BG] bmp_load result: %d\n", res);
+    printf(":: bg: bmp_load result: %d\n", res);
 
     if (res != 0) {
-        printf("failed to unknown reason\n");
+        printf(":: error: failed to unknown reason\n");
         g_bg_loaded = 0;
         return;
     }
     if (!g_bg.pixels) {
-        printf("pixels pointer is NULL\n");
+        printf(":: error: pixels pointer is NULL\n");
         g_bg_loaded = 0;
         return;
     }
     if (g_bg.width <= 0 || g_bg.height <= 0) {
-        printf("return. %dx%d\n", g_bg.width, g_bg.height);
+        printf(":: error: return. %dx%d\n", g_bg.width, g_bg.height);
         g_bg_loaded = 0;
         return;
     }
 
-    printf("bg: resolution: %dx%d\n", g_bg.width, g_bg.height);
-    printf("bg: pixels ptr: %p\n", g_bg.pixels);
+    printf("   bg: resolution: %dx%d\n", g_bg.width, g_bg.height);
+    printf("   bg: pixels ptr: %p\n", g_bg.pixels);
 
 
     int sw = comp_w();
     int sh = comp_h();
 
-    printf(":: analysing screen... %dx%d\n", sw, sh);
+    printf(":: bg: analysing screen... %dx%d\n", sw, sh);
 
     if (g_bg.width > sw || g_bg.height > sh) {
-        printf("warning: bg pic. too large...\n");
+        printf(":: warning: bg picture is too large...\n");
     }
     if (g_bg.width < sw || g_bg.height < sh) {
-        printf("warning: bg pic. is smaller than the screen...\n");
+        printf(":: warning: bg picture is smaller than the screen...\n");
     }
 
     unsigned char *p = (unsigned char *)g_bg.pixels;
-    printf("bg: %02X %02X %02X %02X (if available)\n", p[0], p[1], p[2], p[3]);
+    printf("   bg: %02X %02X %02X %02X (if available)\n", p[0], p[1], p[2], p[3]);
 
     g_bg_loaded = 1;
 
