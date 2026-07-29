@@ -1,13 +1,10 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Copyright (c) 2026 doccrLabs
+# Copyright (c) 2026 sulfurLabs
 #
-# PROJECT: e3
+# PROJECT: s4
 # FILE: Makefile
-# CREATED BY: emex
-# MODIFIED BY: --
-#
 #
 
 CC     := x86_64-elf-gcc
@@ -42,9 +39,10 @@ OBJS := build/desktop.o \
         build/fonts/fonts.o \
         build/taskbar/taskbar.o \
         build/taskbar/entries.o \
-        build/taskbar/startmenu.o
+        build/taskbar/startmenu.o \
+        build/shm/shm_host.o
 
-all: clean $(LIBC)/build/crt0.o dirs build/desktop.elf run
+all: clean $(LIBC)/build/crt0.o dirs build/s4.elf run
 
 fetchDeps:
 	mkdir -p include
@@ -68,34 +66,41 @@ dirs:
 	mkdir -p build/cmd
 	mkdir -p build/fonts
 	mkdir -p build/taskbar
+	mkdir -p build/shm
 run:
 	@echo "running OS..."
 	cd $(OS_PATH) && make run
 
-build/desktop.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTOP)/build/libdesktop.a
-	@echo "Building e3 now..."
+build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTOP)/build/libdesktop.a
+	@echo "Building s4 now..."
 	$(LD) $(LDFLAGS) $(LIBC)/build/crt0.o $(OBJS) $(LIBDESKTOP)/build/libdesktop.a $(LIBC)/build/libc.a -o $@
-	@echo "e3 was succesfully built!"
-	@rm -f  $(ROOTFS_PATH)/desktop.elf
-	@cp build/desktop.elf $(ROOTFS_PATH)desktop.elf
+	@echo "s4 was succesfully built!"
+
+	@echo "building libdesktop now..."
+	@$(MAKE) -C libdesktop
+	@echo "libdesktop was succesfully built!"
+
+	@rm -f  $(ROOTFS_PATH)/s4.elf
+	@cp build/s4.elf $(ROOTFS_PATH)desktop.elf
 	@cp libdesktop/build/libdesktop.a $(OS_LIBS)libdesktop.a
 	@cp libdesktop/libdesktop.h $(OS_LIBS)libdesktop.h
 
 
-build/desktop.o:                    e3/desktop.c                   ; $(CC) $(CFLAGS) -c $< -o $@
-build/compositor/comp.o:            e3/compositor/comp.c           ; $(CC) $(CFLAGS) -c $< -o $@
-build/bg/bmp/bmp.o:                 e3/bg/bmp/bmp.c                ; $(CC) $(CFLAGS) -c $< -o $@
-build/bg/bg.o:                      e3/bg/bg.c                     ; $(CC) $(CFLAGS) -c $< -o $@
-build/win/win.o:                    e3/win/win.c                   ; $(CC) $(CFLAGS) -c $< -o $@
-build/desktop_input_dispatch.o:     e3/desktop_input_dispatch.c    ; $(CC) $(CFLAGS) -c $< -o $@
-build/cursor/cursor.o:              e3/cursor/cursor.c             ; $(CC) $(CFLAGS) -c $< -o $@
-build/render/render.o:              e3/render/render.c             ; $(CC) $(CFLAGS) -c $< -o $@
-build/input/input.o:                e3/input/input.c               ; $(CC) $(CFLAGS) -c $< -o $@
-build/fonts/fonts.o:                e3/fonts/fonts.c               ; $(CC) $(CFLAGS) -c $< -o $@
-build/taskbar/taskbar.o:            e3/taskbar/taskbar.c           ; $(CC) $(CFLAGS) -c $< -o $@
-build/taskbar/entries.o:            e3/taskbar/entries.c           ; $(CC) $(CFLAGS) -c $< -o $@
-build/taskbar/startmenu.o:          e3/taskbar/startmenu.c         ; $(CC) $(CFLAGS) -c $< -o $@
-build/cmd/cmd.o:                    e3/cmd/cmd.c                   ; $(CC) $(CFLAGS) -c $< -o $@
+build/desktop.o:                    s4/desktop.c                   ; $(CC) $(CFLAGS) -c $< -o $@
+build/compositor/comp.o:            s4/compositor/comp.c           ; $(CC) $(CFLAGS) -c $< -o $@
+build/bg/bmp/bmp.o:                 s4/bg/bmp/bmp.c                ; $(CC) $(CFLAGS) -c $< -o $@
+build/bg/bg.o:                      s4/bg/bg.c                     ; $(CC) $(CFLAGS) -c $< -o $@
+build/win/win.o:                    s4/win/win.c                   ; $(CC) $(CFLAGS) -c $< -o $@
+build/desktop_input_dispatch.o:     s4/desktop_input_dispatch.c    ; $(CC) $(CFLAGS) -c $< -o $@
+build/cursor/cursor.o:              s4/cursor/cursor.c             ; $(CC) $(CFLAGS) -c $< -o $@
+build/render/render.o:              s4/render/render.c             ; $(CC) $(CFLAGS) -c $< -o $@
+build/input/input.o:                s4/input/input.c               ; $(CC) $(CFLAGS) -c $< -o $@
+build/fonts/fonts.o:                s4/fonts/fonts.c               ; $(CC) $(CFLAGS) -c $< -o $@
+build/taskbar/taskbar.o:            s4/taskbar/taskbar.c           ; $(CC) $(CFLAGS) -c $< -o $@
+build/taskbar/entries.o:            s4/taskbar/entries.c           ; $(CC) $(CFLAGS) -c $< -o $@
+build/taskbar/startmenu.o:          s4/taskbar/startmenu.c         ; $(CC) $(CFLAGS) -c $< -o $@
+build/shm/shm_host.o:               s4/shm/shm_host.c              ; $(CC) $(CFLAGS) -c $< -o $@
+build/cmd/cmd.o:                    s4/cmd/cmd.c                   ; $(CC) $(CFLAGS) -c $< -o $@
 
 $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:
 	$(MAKE) -C $(LIBC)

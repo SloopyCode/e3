@@ -1,20 +1,21 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * Copyright (c) 2026 doccrLabs
+ * Copyright (c) 2026 sulfurLabs
  *
- * PROJECT: e3
+ * PROJECT: s4
  * FILE: libdesktop.h
- * CREATED BY: emex
- * MODIFIED BY: --
  */
 
 #pragma once
 
+#include <sys/shm.h>
+
 //dt input:
-#define DT_EV_NONE   0
-#define DT_EV_MOUSE  1
-#define DT_EV_KEY    2
+#define DT_EV_NONE    0
+#define DT_EV_MOUSE   1
+#define DT_EV_KEY     2
+#define DT_EV_RESIZE  3
 
 #define DT_BTN_LEFT   0x01
 #define DT_BTN_RIGHT  0x02
@@ -32,6 +33,8 @@ typedef struct
     short my;
     signed char  scroll;
 
+    int width;
+    int height;
 } dt_event_t;
 
 #define DT_EVENT_QUEUE_MAX 64
@@ -105,8 +108,12 @@ static inline void desktopWindowSizeForContent(
     }
 }
 
+#define DT_ABI_VERSION 3
+
 typedef struct
 {
+	unsigned int abi_version;
+
     // register
     int  (*createWindow)(
         const char *title,
@@ -126,10 +133,19 @@ typedef struct
     // unregister
     void (*closeWindow)(void);
     void (*setTitle)(const char *title);
+    void (*presentFrame)(void);
     void (*markDirty)(void);
     void (*winbuf_write)(const unsigned int *pixels, int w, int h);
-    int (*pollEvents)(dt_event_t *buf, int max);
     void (*getCurrentMousePos)(int *out_x, int *out_y);
+    void (*getWindowSize)(int *out_w, int *out_h);
+    int (*pollEvents)(dt_event_t *buf, int max);
+    unsigned int *(*allocFramebuffer)(int w, int h);
+    unsigned int *(*resizeFramebuffer)(int w, int h);
 } Desktop;
 
 extern Desktop desktop;
+
+static inline int dt_check_abi(void)
+{
+	return desktop.abi_version == DT_ABI_VERSION;
+}

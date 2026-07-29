@@ -1,12 +1,10 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
  *
- * Copyright (c) 2026 doccrLabs
+ * Copyright (c) 2026 sulfurLabs
  *
- * PROJECT: e3
+ * PROJECT: s4
  * FILE: libdesktop.c
- * CREATED BY: emex
- * MODIFIED BY: --
  */
 
 #include "libdesktop.h"
@@ -14,11 +12,16 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <stdio.h>
+#include <sys/shm.h>
+
+#define DT_ABI_VERSION 3
 
 #define DT_CMD         "/tmp/dt/cmd"
-#define DT_DIRTY       "/tmp/dt/dirty"
+#define DT_DIRTY_PFX   "/tmp/dt/dirty_"
+#define DT_WSIZE_PFX   "/tmp/dt/wsize_"
 #define DT_CURSOR      "/tmp/dt/cursor"
-#define DT_WBUF_PFX    "/tmp/dt/wbuf_"
+//#define DT_WBUF_PFX    "/tmp/dt/wbuf_"
 #define DT_INPUT_PFX   "/tmp/dt/input_"
 
 #define DT_QUEUE_BYTES (sizeof(int) + sizeof(dt_event_t) * DT_EVENT_QUEUE_MAX)
@@ -196,59 +199,103 @@ static void _setTitle(const char *title)
     _cmd_append(buf);
 }
 
-static void _markDirty(void)
+static uint64_t s_shm_id  = 0;
+static unsigned int  *s_shm_ptr = NULL;
+
+static int s_shm_w = 0;
+static int s_shm_h = 0;
+static int s_shm_fd = -1;
+
+static int ensure_shm_fd(void)
 {
-    int fd = open(DT_DIRTY, O_WRONLY | O_CREAT);
-    if (fd >= 0)
-    {
-    	write(fd, "1\n" ,2);
-     	close(fd);
-    }
+    if (s_shm_fd < 0) s_shm_fd = open(SHM_DEV, O_RDWR);
+    return s_shm_fd;
 }
 
-static void _winbuf_write(const unsigned int *pixels, int w, int h)
+static void send_shm_cmd(uint64_t shm_id, int w, int h)
 {
-    if (!pixels || w <= 0 || h <= 0) return;
+    char buf[128];
+    int p = 0;
 
-    char  dbg[64];
-    snprintf(
-    	dbg,
-     	sizeof(dbg),
-      	"[LIBDESKTOP] write %dx%d\\n",
-       	w,
-        h
-    );
-    write(1, dbg, strlen(dbg));
+    buf[p++] = 'S'; buf[p++] = ' ';
 
-    char path[64];
-    _pid_path(DT_WBUF_PFX, path);
+    _app_int(buf, &p, (int)getpid());
+    buf[p++] = ' ';
 
-    int fd = open(path, O_WRONLY | O_CREAT);
-    if (fd < 0)
+    _app_int(buf, &p, (int)shm_id);
+    buf[p++] = ' ';
+
+    _app_int(buf, &p, w);
+    buf[p++] = ' ';
+
+    _app_int(buf, &p, h);
+    buf[p++] = '\n';
+
+    buf[p] = '\0';
+
+    _cmd_append(buf);
+}
+
+static unsigned int *_allocFramebuffer(int w, int h)
+{
+    if (w <= 0 || h <= 0) return NULL;
+    if (ensure_shm_fd() < 0) return NULL;
+
+    shm_ioctl_args_t args =
     {
-        write(1, "[LIBDESKTOP] open failed\\n", 26);
-        return;
+    	.id = 0,
+     	.size = (uint64_t)w * h * 4,
+      	.vaddr = 0
+    };
+
+    if (ioctl(s_shm_fd, SHM_IOCTL_ALLOC, &args) < 0) return NULL;
+
+    s_shm_ptr = (unsigned int *)(unsigned long)args.vaddr;
+    s_shm_w = w;
+    s_shm_h = h;
+    s_shm_id = args.id;
+
+    send_shm_cmd(s_shm_id, w, h);
+    return s_shm_ptr;
+}
+
+static unsigned int *_resizeFramebuffer(int w, int h)
+{
+    if (w <= 0 || h <= 0 || (w == s_shm_w && h == s_shm_h)) return s_shm_ptr;
+
+    uint64_t old_id  = s_shm_id;
+    unsigned int *old_ptr = s_shm_ptr;
+    unsigned int *fresh = _allocFramebuffer(w, h);
+
+    if (!fresh) return s_shm_ptr; //old segment
+
+    if (old_id)
+    {
+        shm_ioctl_args_t args =
+    	{
+	     	.id = old_id,
+		    .size = 0,
+		    .vaddr = (uint64_t)(unsigned long)old_ptr
+	    };
+        ioctl(s_shm_fd, SHM_IOCTL_UNMAP, &args);
     }
 
-    int hdr[2];
-    hdr[0] = w;
-    hdr[1] = h;
+    return fresh;
+}
 
-    long a = write(fd, hdr, 8);
-    long b = write(fd, pixels, (unsigned)( w * h * 4));
+static void _presentFrame(void)
+{
+    if (!s_shm_id) return;
 
-    close(fd);
+    char path[64];
+    _pid_path("/tmp/dt/dirty_", path);
 
-    snprintf(
-    	dbg,
-     	sizeof(dbg),
-        "[LIBDESKTOP] hdr =%ld  pix=%ld\\n",
-        a,
-        b
-    );
-    write(1, dbg, strlen(dbg));
-
-    _markDirty();
+    int fd = open(path, O_WRONLY | O_CREAT);
+    if (fd >= 0)
+    {
+    	write(fd, "1", 1);
+     	close(fd);
+    }
 }
 
 static int _pollEvents(dt_event_t *buf, int max)
@@ -324,15 +371,51 @@ static void _getCurrentMousePos(int *out_x, int *out_y)
     *out_y = y;
 }
 
+static void _getWindowSize(int *out_w, int *out_h)
+{
+    if (!out_w || !out_h) return;
+
+    *out_w = 0;
+    *out_h = 0;
+
+    char path[64];
+    char buf[32];
+    int n;
+    int fd;
+
+    _pid_path(DT_WSIZE_PFX, path);
+
+    fd = open(path, O_RDONLY);
+    if (fd < 0) return;
+    n = (int)read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+
+    if (n <= 0) return;
+    buf[n] = '\0';
+
+    const char *p = buf;
+    int w = 0;
+    int h = 0;
+    while (*p >= '0' && *p <= '9') w = w * 10 + (*p++ - '0');
+    while (*p == ' ') p++;
+    while (*p >= '0' && *p <= '9') h = h * 10 + (*p++ - '0');
+
+    *out_w = w;
+    *out_h = h;
+}
+
 // for "desktop."
 Desktop desktop =
 {
+    .abi_version        = DT_ABI_VERSION,
     .createWindow       = _createWindow,
     .createPopup        = _createPopup,
     .closeWindow        = _closeWindow,
     .setTitle           = _setTitle,
-    .markDirty          = _markDirty,
-    .winbuf_write       = _winbuf_write,
+    .allocFramebuffer   = _allocFramebuffer,
+    .resizeFramebuffer  = _resizeFramebuffer,
+    .presentFrame       = _presentFrame,
     .pollEvents         = _pollEvents,
     .getCurrentMousePos = _getCurrentMousePos,
+    .getWindowSize      = _getWindowSize,
 };
