@@ -11,10 +11,11 @@ CC     := x86_64-elf-gcc
 LD     := x86_64-elf-ld
 LIBC   ?= include/libc
 
-OS_PATH     ?= ~/doccrLabs/doccrOS/
+OS_PATH     ?= ~/sulfurLabs/sulfurOS/
 ROOTFS_PATH ?= $(OS_PATH)dsk/rd/system/desktop/
 OS_LIBS     ?= $(OS_PATH)/user/libs/
 LIBDESKTOP  := libdesktop/
+UI16 := ui16/
 
 CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector     \
           -fno-PIE -fno-pic -m64 -march=x86-64 -mno-sse -mno-sse2        \
@@ -31,6 +32,7 @@ OBJS := build/desktop.o \
         build/compositor/comp.o \
         build/cmd/cmd.o \
         build/bg/bmp/bmp.o \
+        build/bg/tga/tga.o \
         build/bg/bg.o \
         build/win/win.o \
         build/cursor/cursor.o \
@@ -54,11 +56,13 @@ fetchDeps:
 
 dirs:
 	mkdir -p libdesktop/build
+	mkdir -p ui16/build
 
 	mkdir -p build
 	mkdir -p build/compositor
 	mkdir -p build/bg
 	mkdir -p build/bg/bmp
+	mkdir -p build/bg/tga
 	mkdir -p build/win
 	mkdir -p build/cursor
 	mkdir -p build/render
@@ -80,15 +84,25 @@ build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTO
 	@$(MAKE) -C libdesktop
 	@echo "libdesktop was succesfully built!"
 
+	@echo "building ui16 now..."
+	@$(MAKE) -C ui16
+	@echo "ui16 was succesfully built!"
+
 	@rm -f  $(ROOTFS_PATH)/s4.elf
+	@mkdir -p $(OS_LIBS)$(UI16)
+	@mkdir -p $(OS_LIBS)$(LIBDESKTOP)
 	@cp build/s4.elf $(ROOTFS_PATH)desktop.elf
-	@cp libdesktop/build/libdesktop.a $(OS_LIBS)libdesktop.a
-	@cp libdesktop/libdesktop.h $(OS_LIBS)libdesktop.h
+	@cp libdesktop/build/libdesktop.a $(OS_LIBS)$(LIBDESKTOP)libdesktop.a
+	@cp libdesktop/libdesktop.h $(OS_LIBS)$(LIBDESKTOP)libdesktop.h
+	@cp ui16/build/ui16.a $(OS_LIBS)$(UI16)ui16.a
+	@cp ui16/include/ui16.h $(OS_LIBS)$(UI16)ui16.h
+	@cp ui16/include/ui16buttons.h $(OS_LIBS)$(UI16)ui16buttons.h
 
 
 build/desktop.o:                    s4/desktop.c                   ; $(CC) $(CFLAGS) -c $< -o $@
 build/compositor/comp.o:            s4/compositor/comp.c           ; $(CC) $(CFLAGS) -c $< -o $@
 build/bg/bmp/bmp.o:                 s4/bg/bmp/bmp.c                ; $(CC) $(CFLAGS) -c $< -o $@
+build/bg/tga/tga.o:                 s4/bg/tga/tga.c                ; $(CC) $(CFLAGS) -c $< -o $@
 build/bg/bg.o:                      s4/bg/bg.c                     ; $(CC) $(CFLAGS) -c $< -o $@
 build/win/win.o:                    s4/win/win.c                   ; $(CC) $(CFLAGS) -c $< -o $@
 build/desktop_input_dispatch.o:     s4/desktop_input_dispatch.c    ; $(CC) $(CFLAGS) -c $< -o $@
@@ -108,7 +122,12 @@ $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:
 $(LIBDESKTOP)/build/libdesktop.a:
 	$(MAKE) -C $(LIBDESKTOP)
 
+$(UI16)/build/ui16.a:
+	$(MAKE) -C $(UI16)
+
 clean:
 	rm -f build/*.o build/compositor/*.o build/bg/*.o build/bg/bmp/*.o build/win/*.o build/cursor/*.o build/render/*.o build/input/*.o build/cmd/*.o build/fonts/* build/taskbar/*.o build/desktop.elf
+	@$(MAKE) -C ui16 clean
+	@$(MAKE) -C libdesktop clean
 
 .PHONY: all clean install run

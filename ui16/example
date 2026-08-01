@@ -1,0 +1,27 @@
+//ui16_setRoot(root);
+
+ui16_container(
+    style (
+        layout(row),
+        width(fill),
+        height(fill)
+    )
+) {
+    ui16_container(
+        style(
+            width(percent(20)),
+            bg(rgb(30,30,30))
+        )
+    ){
+        ui16_button("button1");
+    };
+
+    ui16_container(
+        style(
+            width(fill),
+            layout(column)
+        )
+    ) {
+        ui16_label("Hewwo");
+    };
+}

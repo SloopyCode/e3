@@ -254,7 +254,7 @@ void bmp_draw_ex(
     int bright,
     int alpha
 ) {
-    static unsigned int row_buf[BMP_ROW_BUF_W];
+    //static unsigned int row_buf[BMP_ROW_BUF_W];
 
     if (!img || !img->pixels) return;
     if (alpha == 0) return; // fully transparent 0x00
@@ -264,7 +264,7 @@ void bmp_draw_ex(
     int dst_w = (w > 0) ? w : src_w;
     int dst_h = (h > 0) ? h : src_h;
 
-    int scr_h = comp_h();
+    //int scr_h = comp_h();
 
     // cheks for effects
     int has_fx = (sat != -1 || bright != 0 || alpha != 255);
@@ -273,13 +273,13 @@ void bmp_draw_ex(
     {
         int abs_y = y + dy;
         int sy = (dst_h > 1) ? (dy * (src_h - 1) / (dst_h - 1)) : 0;
-        int row_len = dst_w;
+        //int row_len = dst_w;
 
-        if (abs_y < 0 || abs_y >= scr_h) continue;
+        //if (abs_y < 0 || abs_y >= scr_h) continue;
         if (sy >= src_h) sy = src_h - 1;
-        if (row_len > BMP_ROW_BUF_W) row_len = BMP_ROW_BUF_W;
+        //if (row_len > BMP_ROW_BUF_W) row_len = BMP_ROW_BUF_W;
 
-        for (int dx = 0; dx < row_len; dx++)
+        for (int dx = 0; dx < dst_w; dx++)
         {
             // nearest neighboor
             int sx = (dst_w > 1) ? (dx * (src_w - 1) / (dst_w - 1)) : 0;
@@ -289,12 +289,33 @@ void bmp_draw_ex(
 
             if (has_fx) pix = _apply_fx(pix, sat, bright, alpha);
 
-            row_buf[dx] = pix;
-        }
+            unsigned int a = pix >> 24;
+            if (a == 0) continue;
 
-        // comp_put_row skips pixels that fall outside the screen bounds
-        comp_put_row(x, abs_y, row_buf, row_len); // via e3 compositor now
-        //TODO:
-        // remove ts
+            int abs_x = x + dx;
+
+            if (a == 255)
+            {
+                comp_set(abs_x, abs_y, pix);
+                continue;
+            }
+
+            // partial alpha
+            unsigned int bgc = comp_get(abs_x, abs_y);
+
+            unsigned int sr = (pix  >> 16) & 0xFF;
+            unsigned int sg = (pix  >> 8) & 0xFF;
+            unsigned int sb = pix & 0xFF;
+
+            unsigned int br  = (bgc >> 16) & 0xFF;
+            unsigned int bg2 = (bgc >> 8) & 0xFF;
+            unsigned int bb  = bgc & 0xFF;
+
+            unsigned int rr = (sr * a + br  * (255 - a)) / 255;
+            unsigned int rg = (sg * a + bg2 * (255 - a)) / 255;
+            unsigned int rb = (sb * a + bb  * (255 - a)) / 255;
+
+            comp_set(abs_x, abs_y, 0xFF000000u | (rr << 16) | (rg << 8) | rb);
+        }
     }
 }

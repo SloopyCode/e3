@@ -468,6 +468,15 @@ int taskbar_click(int mx, int my)
         	if (!file_exists(wg->exec)) return 1;
         	// just spawn and forget, no wait
             pid_t pid = fork();
+
+            printf("[TASKBAR] fork() returned pid=%d\n", (int)pid);
+
+            if (pid < 0)
+            {
+                printf("[TASKBAR] fork FAILED \n");
+                return 1;
+            }
+
             if (pid == 0)
             {
                 char *argv[] = { wg->exec, (char *)0 };

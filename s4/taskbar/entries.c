@@ -10,6 +10,7 @@
 
 #include "entries.h"
 #include "../bg/bmp/bmp.h"
+#include "../bg/tga/tga.h"
 #include "../config/cfg.h"
 #include <string.h>
 #include <stdio.h>
@@ -22,7 +23,7 @@ static tb_widget_t s_entries[] =
         .type          = TB_WIDGET_APP,
         .name          = "login",
         .text          = "login",
-        .exec          = SYSTEM "/login.elf",
+        .exec          = SYSTEM "login.elf",
         .icon_path     = NULL,
         .icon          = { .loaded = 0 },
         .popup_pid     = -1,
@@ -35,7 +36,7 @@ static tb_widget_t s_entries[] =
         .name          = "DOOM",
         .text          = "DOOM",
         .exec          = "/bin/doomgeneric.elf",
-        .icon_path     = SYSTEM "/icons/doom.bmp",
+        .icon_path     = SYSTEM "icons/doom.tga",
         .icon          = { .loaded = 0 },
         .popup_pid     = -1,
         .popup_w       = 0,
@@ -44,9 +45,9 @@ static tb_widget_t s_entries[] =
     },
     {
         .type          = TB_WIDGET_APP,
-        .name          = "gears",
-        .text          = "gears",
-        .exec          = "/bin/gears.elf",
+        .name          = "template",
+        .text          = "ui16",
+        .exec          = "/bin/template.elf",
         .icon_path     = NULL,
         .icon          = { .loaded = 0 },
         .popup_pid     = -1,
@@ -70,9 +71,27 @@ static tb_widget_t s_entries[] =
 
 #define ENTRIES_COUNT (int)(sizeof(s_entries) / sizeof(s_entries[0]))
 
-static int does_my_file_exists(const char *path) // does it??
+static int does_my_file_exists(const char *path)
 {
-//
+    //struct stat st;
+   // re
+    (void)path;
+}
+
+static int count_opaque_pixels(const bmp_image_t *img)
+{
+    if (!img->pixels) return 0;
+
+    int n = img->width * img->height;
+    int i;
+    int opaque = 0;
+
+    for (i = 0; i < n; i++)
+    {
+        if (img->pixels[i] >> 24) opaque++;
+    }
+
+    return opaque;
 }
 
 static void entry_load_icon(tb_widget_t *entry)
@@ -91,23 +110,80 @@ static void entry_load_icon(tb_widget_t *entry)
         snprintf(
             auto_path,
             sizeof(auto_path),
-            "/system/desktop/icons/%s.bmp",
+            SYSTEM "icons/%s.tga",
             entry->name
         );
 
         path = auto_path;
     }
 
-    if (bmp_load(path, &entry->icon.image) == 0)
+    if (does_my_file_exists(path) && tga_load(path, &entry->icon.image) == 0)
+    {
+        entry->icon.loaded = 1;
+
+        int opaque = count_opaque_pixels(&entry->icon.image);
+        int total  = entry->icon.image.width * entry->icon.image.height;
+
+        printf(
+            ":: icon: '%s': %s(%dx%d) : %d/%d (alpha>0)\n\n",
+            entry->name,
+            path,
+            entry->icon.image.width,
+            entry->icon.image.height,
+            opaque,
+            total
+        );
+
+        if (opaque == 0)
+        {
+            printf(
+                ":: icon: '%s': alpha channel is complete 0\n",
+                entry->name
+            );
+        }
+
+        return;
+    }
+
+    printf(":: icon: tga: '%s' not working. bmp fallback\n", entry->name, path);
+
+    {
+        static char bmp_fallback[256];
+        int plen = 0;
+        while (path[plen]) plen++;
+
+        if (plen > 4 && plen < (int)sizeof(bmp_fallback))
+        {
+            strncpy(bmp_fallback, path, sizeof(bmp_fallback) - 1);
+            bmp_fallback[sizeof(bmp_fallback) - 1] = '\0';
+            bmp_fallback[plen - 3] = 'b';
+            bmp_fallback[plen - 2] = 'm';
+            bmp_fallback[plen - 1] = 'p';
+
+            if (bmp_load(bmp_fallback, &entry->icon.image) == 0)
+            {
+                entry->icon.loaded = 1;
+                printf("[ICON] bmp-fallback '%s', no alpha channel now\n", entry->name, bmp_fallback);
+                return;
+            }
+        }
+    }
+
+    printf(":: icon: '%s': not found, trying exec.tga, then exec.bmp...\n\n", entry->name);
+
+    if (tga_load(SYSTEM "icons/exec.tga", &entry->icon.image) == 0)
     {
         entry->icon.loaded = 1;
         return;
     }
 
-    if (bmp_load("/system/desktop/icons/exec.bmp", &entry->icon.image ) == 0
-    ){
-    	entry->icon.loaded = 1;
+    if (bmp_load(SYSTEM "icons/exec.bmp", &entry->icon.image) == 0)
+    {
+        entry->icon.loaded = 1;
+        return;
     }
+
+    printf(":: icon: all failed, no icon for today :D\n", entry->name);
 }
 
 tb_widget_t *entries_get(int *out_count)
