@@ -15,7 +15,7 @@
 #define DT_DIRTY  "/tmp/dt/dirty"
 #define DT_CURSOR "/tmp/dt/cursor"
 
-#ifdef __doccr__
+#ifdef __sulfur__
 	#define MOUSE_DEV    "/dev/mouse"
 	#define KEYBOARD_DEV "/dev/kbd0"
 	#define FRAMEBUFFER_DEV "/dev/fb0"

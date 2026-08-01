@@ -19,7 +19,7 @@ UI16 := ui16/
 
 CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector     \
           -fno-PIE -fno-pic -m64 -march=x86-64 -mno-sse -mno-sse2        \
-          -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11 -D__doccr__ -g \
+          -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11 -D__sulfur__ -g\
           -I$(LIBC)/include                                              \
           -I$(LIBDESKTOP)
 

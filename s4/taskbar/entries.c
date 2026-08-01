@@ -59,7 +59,7 @@ static tb_widget_t s_entries[] =
         .type          = TB_WIDGET_APP,
         .name          = "welcome",
         .text          = "welcome",
-        .exec          = "/system/welcome.elf",
+        .exec          = "/system/desktop/welcome.elf",
         .icon_path     = NULL,
         .icon          = { .loaded = 0 },
         .popup_pid     = -1,

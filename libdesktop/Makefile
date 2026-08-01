@@ -13,7 +13,7 @@ LIBC := ../include/libc
 
 CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector  \
           -fno-PIE -fno-pic -m64 -march=x86-64 -mno-red-zone          \
-          -Wall -Wextra -std=gnu11 -D__doccr__                        \
+          -Wall -Wextra -std=gnu11 -D__sulfur__                       \
           -I$(LIBC)/include                                           \
           -I.
 
