@@ -26,7 +26,7 @@ static int ui16__resolveSize(
         int measured_width = 0;
         int measured_height = 0;
 
-        if (renderer && renderer->measureText && node->text) renderer->measureText(node->text, &measured_width, &measured_height);
+        if (renderer && renderer->measureText && node->text) renderer->measureText(node->text, ui16__resolveFont(node), &measured_width, &measured_height);
 
         return is_width_axis ? measured_width : measured_height;
     }

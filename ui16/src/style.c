@@ -9,6 +9,7 @@
  */
 
 #include "ui16.h"
+#include "ui16_priv.h"
 
 ui16_style_t ui16__defaultStyle(void)
 {
@@ -21,6 +22,7 @@ ui16_style_t ui16__defaultStyle(void)
     default_style.gap = 0;
     default_style.radius = 0;
     default_style.layout = row;
+    default_style.font = fontInherit;
 
     return  default_style;
 }
@@ -66,6 +68,10 @@ ui16_style_t ui16__applyMods(ui16_style_t base_style, const ui16_style_mod_t *mo
                 result_style.layout = current_mod->data.layout_value;
                 break;
 
+            case UI16_MOD_FONT:
+                result_style.font = current_mod->data.font_value;
+                break;
+
             default:
                 break;
 
@@ -73,4 +79,14 @@ ui16_style_t ui16__applyMods(ui16_style_t base_style, const ui16_style_mod_t *mo
     }
 
     return result_style;
+}
+
+ui16_font_kind_t ui16__resolveFont(ui16_node_t *node)
+{
+    for (ui16_node_t *current_node = node; current_node; current_node = current_node->parent)
+    {
+        if (current_node->style.font != UI16_FONT_INHERIT) return current_node->style.font;
+    }
+
+    return ui16__genericStyle().font;
 }

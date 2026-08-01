@@ -12,10 +12,19 @@ This is a simple example of ui16,
 
 int main()
 {
-		// libdesktop stuff here...
-		
-    ui16_setRoot(root);
-	
+    // libdesktop stuff here...
+
+    ui16_setRoot(
+        style(
+            width(fill),
+            height(fill),
+            bg(rgb(64, 64, 64))
+        ),
+        window_buffer,
+        UI16DEMO_CONTENT_WIDTH,
+        UI16DEMO_CONTENT_HEIGHT
+    );
+
     ui16_container( /*this container is "root" as it is 
                       the first container, (main container) */
         style (
@@ -32,7 +41,7 @@ int main()
         ){
             ui16_button("button1");
         };
-  	
+
         ui16_container(
             style(
                 width(fill),

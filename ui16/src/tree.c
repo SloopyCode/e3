@@ -73,13 +73,15 @@ ui16_node_t *ui16__attachNode(ui16_node_kind_t node_kind, ui16_style_t node_styl
     return new_node;
 }
 
-ui16_node_t *ui16_setRoot(ui16_style_t root_style)
+ui16_node_t *ui16__setRootStyled(ui16_style_t root_style, unsigned int *target_buffer, int buffer_width, int buffer_height)
 {
     arena_used = 0;
     root_node = 0;
     current_parent = 0;
 
-    root_node = (ui16_node_t *) ui16__alloc(sizeof(ui16_node_t));
+    ui16__setTargetBuffer(target_buffer, buffer_width, buffer_height);
+
+    root_node = (ui16_node_t *)ui16__alloc(sizeof(ui16_node_t));
     if (!root_node) return 0;
 
     root_node->kind = UI16_NODE_CONTAINER;
@@ -97,4 +99,9 @@ ui16_node_t *ui16_setRoot(ui16_style_t root_style)
     current_parent = root_node;
 
     return root_node;
+}
+
+ui16_node_t *ui16__setRootDefault(unsigned int *target_buffer, int buffer_width, int buffer_height)
+{
+    return ui16__setRootStyled(ui16__genericStyle(), target_buffer, buffer_width, buffer_height);
 }
