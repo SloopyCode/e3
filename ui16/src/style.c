@@ -18,6 +18,7 @@ ui16_style_t ui16__defaultStyle(void)
     default_style.width = autosize;
     default_style.height = autosize;
     default_style.background = 0;
+    default_style.color = 0xFFFFFFFFu;
     default_style.padding = 0;
     default_style.gap = 0;
     default_style.radius = 0;
@@ -50,6 +51,10 @@ ui16_style_t ui16__applyMods(ui16_style_t base_style, const ui16_style_mod_t *mo
 
             case UI16_MOD_BACKGROUND:
                 result_style.background = current_mod->data.color_value;
+                break;
+
+            case UI16_MOD_COLOR:
+                result_style.color = current_mod->data.color_value;
                 break;
 
             case UI16_MOD_PADDING:

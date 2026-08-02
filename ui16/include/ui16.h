@@ -42,6 +42,7 @@ typedef struct
     ui16_size_t width;
     ui16_size_t height;
     unsigned int background;
+    unsigned int color;
     int  padding;
     int  gap;
     int  radius;
@@ -85,6 +86,7 @@ typedef enum
     UI16_MOD_WIDTH,
     UI16_MOD_HEIGHT,
     UI16_MOD_BACKGROUND,
+    UI16_MOD_COLOR,
     UI16_MOD_PADDING,
     UI16_MOD_GAP,
     UI16_MOD_RADIUS,
@@ -126,6 +128,7 @@ ui16_style_t ui16__applyMods(ui16_style_t base_style, const ui16_style_mod_t *mo
 #define width(size_arg)    ((ui16_style_mod_t){ UI16_MOD_WIDTH,      .data.size_value = (size_arg) })
 #define height(size_arg)   ((ui16_style_mod_t){ UI16_MOD_HEIGHT,     .data.size_value = (size_arg) })
 #define bg(color_arg)      ((ui16_style_mod_t){ UI16_MOD_BACKGROUND, .data.color_value = (color_arg) })
+#define color(color_arg)   ((ui16_style_mod_t){ UI16_MOD_COLOR,      .data.color_value = (color_arg) })
 #define padding(int_arg)   ((ui16_style_mod_t){ UI16_MOD_PADDING,    .data.int_value = (int_arg) })
 #define gap(int_arg)       ((ui16_style_mod_t){ UI16_MOD_GAP,        .data.int_value = (int_arg) })
 #define radius(int_arg)    ((ui16_style_mod_t){ UI16_MOD_RADIUS,     .data.int_value = (int_arg) })

@@ -13,4 +13,5 @@
 #include "tb_widget.h"
 
 tb_widget_t *entries_get(int *out_count);
+void entries_load_icon(tb_widget_t *entry);
 void taskbar_load_entry_icon(int index);

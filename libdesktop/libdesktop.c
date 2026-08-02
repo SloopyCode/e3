@@ -324,19 +324,18 @@ static int _pollEvents(dt_event_t *buf, int max)
     int available = (bytes - (int)sizeof(int)) / (int)sizeof(dt_event_t);
     if (count > available) count = available;
 
+    dt_event_t *evs = (dt_event_t *)(raw + sizeof(int));
     int amount = count < max ? count : max;
+    memcpy(buf, evs, (size_t)amount * sizeof(dt_event_t));
 
-    memcpy(
-        buf,
-        raw + sizeof(int),
-        (size_t)amount * sizeof(dt_event_t)
-    );
+    int remaining = count - amount;
+    if (remaining > 0) memmove(evs, evs + amount, (size_t)remaining * sizeof(dt_event_t));
 
-    fd = open(path, O_WRONLY | O_TRUNC);
+    fd = open(path, O_WRONLY | O_CREAT);
     if (fd >= 0)
     {
-        int empty = 0;
-        write(fd, &empty, sizeof(empty));
+        write(fd, &remaining, sizeof(remaining));
+        if (remaining > 0) write(fd, evs, (size_t)remaining * sizeof(dt_event_t));
         close(fd);
     }
 

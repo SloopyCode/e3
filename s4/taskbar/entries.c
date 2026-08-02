@@ -14,7 +14,8 @@
 #include "../config/cfg.h"
 #include <string.h>
 #include <stdio.h>
-#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 //all app entries till we have a parser so it reads from a config
 static tb_widget_t s_entries[] =
@@ -26,6 +27,7 @@ static tb_widget_t s_entries[] =
         .exec          = SYSTEM "login.elf",
         .icon_path     = NULL,
         .icon          = { .loaded = 0 },
+        .disp          = TB_DISP_ICON_TEXT,
         .popup_pid     = -1,
         .popup_w       = 0,
         .popup_h       = 0,
@@ -38,6 +40,7 @@ static tb_widget_t s_entries[] =
         .exec          = "/bin/doomgeneric.elf",
         .icon_path     = SYSTEM "icons/doom.tga",
         .icon          = { .loaded = 0 },
+        .disp          = TB_DISP_ICON_TEXT,
         .popup_pid     = -1,
         .popup_w       = 0,
         .popup_h       = 0,
@@ -50,6 +53,7 @@ static tb_widget_t s_entries[] =
         .exec          = "/bin/template.elf",
         .icon_path     = NULL,
         .icon          = { .loaded = 0 },
+        .disp          = TB_DISP_ICON_TEXT,
         .popup_pid     = -1,
         .popup_w       = 0,
         .popup_h       = 0,
@@ -62,6 +66,7 @@ static tb_widget_t s_entries[] =
         .exec          = "/system/desktop/welcome.elf",
         .icon_path     = NULL,
         .icon          = { .loaded = 0 },
+        .disp          = TB_DISP_ICON_TEXT,
         .popup_pid     = -1,
         .popup_w       = 0,
         .popup_h       = 0,
@@ -73,9 +78,13 @@ static tb_widget_t s_entries[] =
 
 static int does_my_file_exists(const char *path)
 {
-    //struct stat st;
-   // re
-    (void)path;
+    if (!path || path[0] == '\0') return 0;
+
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return 0;
+
+    close(fd);
+    return 1;
 }
 
 static int count_opaque_pixels(const bmp_image_t *img)
@@ -94,7 +103,7 @@ static int count_opaque_pixels(const bmp_image_t *img)
     return opaque;
 }
 
-static void entry_load_icon(tb_widget_t *entry)
+void entries_load_icon(tb_widget_t *entry)
 {
     const char *path;
 
@@ -195,7 +204,7 @@ tb_widget_t *entries_get(int *out_count)
 
     if (!initialized)
     {
-        for (int i = 0; i < ENTRIES_COUNT; i++) entry_load_icon(&s_entries[i]);
+        for (int i = 0; i < ENTRIES_COUNT; i++) entries_load_icon(&s_entries[i]);
 
         initialized = 1;
     }
@@ -210,5 +219,5 @@ void taskbar_load_entry_icon(int index)
 {
     if (index < 0 || index >= ENTRIES_COUNT) return;
     //i dont want to have icons yet cuz bmp doesnt support transparency but in some time i add png ig
-    entry_load_icon(&s_entries[index]);
+    entries_load_icon(&s_entries[index]);
 }

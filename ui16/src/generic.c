@@ -20,6 +20,7 @@ ui16_style_t ui16__genericStyle(void)
     generic_style.width = fill;
     generic_style.height = fill;
     generic_style.background = rgb(45, 45, 45);
+    generic_style.color = 0xFFFFFFFFu;
     generic_style.padding = 0;
     generic_style.gap = 0;
     generic_style.radius = 0;

@@ -35,6 +35,7 @@ static int      s_widget_count = 0;
 static int	s_scr_w = 0;
 static int	s_scr_h = 0;
 static int	s_tb_y  = 0;
+static tb_widget_t s_start_widget;
 
 static int _slen(const char *s)
 {
@@ -209,6 +210,95 @@ static void open_popup_window(int widget_idx, pid_t pid, int pw, int ph)
     close(fd);
 }
 
+static void draw_widget_content(
+    tb_widget_t *wg,
+    int bx, int by, int bw, int bh,
+    int press,
+    unsigned int text_bg
+) {
+    const char *label = (wg->type == TB_WIDGET_APP || wg->type == TB_WIDGET_START)
+        ? wg->name
+        : wg->text
+    ;
+
+    int show_icon = (wg->disp != TB_DISP_TEXT_ONLY) && wg->icon.loaded;
+    int show_text = (wg->disp != TB_DISP_ICON_ONLY);
+    int fw = font_w(FONT8X12_BOLD);
+    int fh = font_h(FONT8X12_BOLD);
+    int nlen = _slen(label);
+    int tw = nlen * fw;
+
+    const int icon_slot = MAX_APPICON_SIZE;
+
+    if (show_icon)
+    {
+        const bmp_image_t *img = &wg->icon.image;
+        int draw_w = img->width;
+        int draw_h = img->height;
+
+        // icon cant be bigger than max size so it needs to be downscaled
+        if (draw_w > icon_slot || draw_h > icon_slot)
+        {
+            float sx = (float)icon_slot / (float)draw_w;
+            float sy = (float)icon_slot / (float)draw_h;
+            float s  = (sx < sy) ? sx : sy;
+
+            draw_w = (int)(draw_w * s);
+            draw_h = (int)(draw_h * s);
+
+            if (draw_w < 1) draw_w = 1;
+            if (draw_h < 1) draw_h = 1;
+        }
+
+        // if theres also text the icon is left, otherwise its centered
+        int slot_x = show_text ? (bx + 4) : (bx + (bw - icon_slot) / 2);
+        int slot_y = by + (bh - icon_slot) / 2;
+
+        int ix = slot_x + (icon_slot - draw_w) / 2;
+        int iy = slot_y + (icon_slot - draw_h) / 2;
+
+        if (draw_w == img->width && draw_h == img->height)
+        {
+            bmp_draw(img, ix, iy);
+        }
+        else
+        {
+            bmp_draw_scaled(img, ix, iy, draw_w, draw_h);
+        }
+    }
+
+    if (show_text)
+    {
+        int ty = by + (bh - fh) / 2 + (press ? 1 : 0);
+        int tx;
+
+        if (show_icon)
+        {
+            tx = bx + 4 + icon_slot + 4 + (press ? 1 : 0);
+        }
+        else
+        {
+            tx = bx + (bw - tw) / 2 + (press ? 1 : 0);
+        }
+
+        for (int ci = 0; ci < nlen; ci++)
+        {
+            unsigned char c = (unsigned char)label[ci] & 0x7Fu;
+
+            for (int row = 0; row < fh; row++)
+            {
+                uint16_t bits = font_glyph(FONT8X12_BOLD, c, row);
+                for (int col = 0; col < fw; col++)
+                {
+                    unsigned int color = (bits & (1u << col)) ? TB_WHITE : text_bg;
+
+                    comp_set(tx + ci * fw + col, ty + row, color);
+                }
+            }
+        }
+    }
+}
+
 void taskbar_init(int scr_w, int scr_h)
 {
 	s_scr_w 	= scr_w;
@@ -225,6 +315,22 @@ void taskbar_init(int scr_w, int scr_h)
      	i < entry_count && s_widget_count < TB_WIDGET_MAX;
       	i++
     ) s_widgets[s_widget_count++] = entries[i];
+
+    {
+        memset(&s_start_widget, 0, sizeof(s_start_widget));
+        s_start_widget.type        = TB_WIDGET_START;
+        s_start_widget.disp        = TB_DISP_ICON_ONLY;
+        s_start_widget.icon_path   = SYSTEM "icons/start.tga";
+        s_start_widget.icon.loaded = 0;
+        s_start_widget.popup_pid   = -1;
+
+        strncpy(s_start_widget.name, "start", TB_WIDGET_NAMELEN - 1);
+        s_start_widget.name[TB_WIDGET_NAMELEN - 1] = '\0';
+        strncpy(s_start_widget.text, "start", TB_WIDGET_TEXTLEN - 1);
+        s_start_widget.text[TB_WIDGET_TEXTLEN - 1] = '\0';
+
+        entries_load_icon(&s_start_widget);
+    }
 
     startmenu_init(scr_w, scr_h);
 
@@ -259,37 +365,16 @@ static void draw_start_button(int y, int mx, int my, int btn_down)
     {
         unsigned int col = press ? TB_BTN_TOP : TB_LIGHT;
 
-        comp_fill(bx,                         by, TB_START_W, TB_BORDER_W, col);
-        comp_fill(bx, by + bh - TB_BORDER_W,     TB_START_W, TB_BORDER_W, col);
-        comp_fill(bx,                         by, TB_BORDER_W, bh,         col);
-        comp_fill(bx + TB_START_W - TB_BORDER_W, by, TB_BORDER_W, bh,     col);
+        comp_fill(bx, by,                            TB_START_W,  TB_BORDER_W, col);
+        comp_fill(bx, by + bh - TB_BORDER_W,         TB_START_W,  TB_BORDER_W, col);
+        comp_fill(bx, by,                            TB_BORDER_W, bh,          col);
+        comp_fill(bx + TB_START_W - TB_BORDER_W, by, TB_BORDER_W, bh,          col);
 
         comp_fill(bx, by, TB_START_W, bh, TB_BUTTON_BG);
         comp_fill(bx, by, TB_START_W, 2,  TB_TOP_BORDER);
     }
 
-    const char *label = "start";
-    int fw2  = font_w(FONT8X12_BOLD);
-    int fh2  = font_h(FONT8X12_BOLD);
-    int nlen = _slen(label);
-    int tw   = nlen * fw2;
-    int tx   = bx + (TB_START_W - tw) / 2;
-    int ty   = by + (bh - fh2)  / 2;
-
-    for (int ci = 0; ci < nlen; ci++)
-    {
-        unsigned char c = (unsigned char)label[ci] & 0x7Fu;
-        for (int row = 0; row < fh2; row++)
-        {
-            uint16_t bits = font_glyph(FONT8X12_BOLD, c, row);
-            for (int col = 0; col < fw2; col++)
-            {
-                unsigned int bg_col = TB_BUTTON_BG;
-                unsigned int color  = (bits & (1u << col)) ? TB_WHITE : bg_col;
-                comp_set(tx + ci * fw2 + col, ty + row, color);
-            }
-        }
-    }
+    draw_widget_content(&s_start_widget, bx, by, TB_START_W, bh, press, TB_BUTTON_BG);
 }
 
 void taskbar_draw(int mx, int my, int btn_down)
@@ -316,7 +401,7 @@ void taskbar_draw(int mx, int my, int btn_down)
         int press = hov && btn_down;
 
         // label / updated label
-        const char *label = (wg->type == TB_WIDGET_APP) ? wg->name : wg->text;
+        //const char *label = (wg->type == TB_WIDGET_APP) ? wg->name : wg->text;
 
         // button face
         comp_fill(bx, by, TB_BTN_W, bh, TB_BUTTON_BG);
@@ -345,10 +430,10 @@ void taskbar_draw(int mx, int my, int btn_down)
 	        {
 	            unsigned int col = press ? TB_BTN_TOP : TB_LIGHT;
 
-	            comp_fill(bx, by, TB_BTN_W, TB_BORDER_W, col);
-	            comp_fill(bx, by + bh - TB_BORDER_W, TB_BTN_W, TB_BORDER_W, col);
-	            comp_fill(bx, by, TB_BORDER_W, bh, col);
-	            comp_fill(bx + TB_BTN_W - TB_BORDER_W, by, TB_BORDER_W, bh, col);
+	            comp_fill(bx, by,                          TB_BTN_W,    TB_BORDER_W, col);
+	            comp_fill(bx, by + bh - TB_BORDER_W,       TB_BTN_W,    TB_BORDER_W, col);
+	            comp_fill(bx, by,                          TB_BORDER_W, bh,          col);
+	            comp_fill(bx + TB_BTN_W - TB_BORDER_W, by, TB_BORDER_W, bh,          col);
 
 				comp_fill(bx, by, TB_BTN_W, bh, TB_BUTTON_BG);
 
@@ -359,78 +444,8 @@ void taskbar_draw(int mx, int my, int btn_down)
 	        }
 	    }
 
-        if (wg->icon.loaded)
-        {
-            const bmp_image_t *img = &wg->icon.image;
-
-            const int slot = MAX_APPICON_SIZE;  // max size
-            int draw_w = img->width;
-            int draw_h = img->height;
-
-            // icon cant be bigger than max size so it needs to be downscaled
-            if (draw_w > slot || draw_h > slot)
-            {
-                float sx = (float)slot / (float)draw_w;
-                float sy = (float)slot / (float)draw_h;
-                float s  = (sx < sy) ? sx : sy;
-
-                draw_w = (int)(draw_w * s);
-                draw_h = (int)(draw_h * s);
-
-                if (draw_w < 1) draw_w = 1;
-                if (draw_h < 1) draw_h = 1;
-            }
-
-            // icon slot position
-            int slot_x = bx + 4;
-            int slot_y = by + (bh - slot) / 2;
-
-            // center the logo
-            int ix = slot_x + (slot - draw_w) / 2;
-            int iy = slot_y + (slot - draw_h) / 2;
-
-            // draw
-            if (draw_w == img->width && draw_h == img->height)
-            {
-                bmp_draw(img, ix, iy);
-            }
-            else
-            {
-                bmp_draw_scaled(img, ix, iy, draw_w, draw_h);
-            }
-        }
-
-        // label, centered
-        int fw   	= font_w(FONT8X12_BOLD);
-        int fh   	= font_h(FONT8X12_BOLD);
-        int nlen 	  = _slen(label);
-        int tw   	= nlen * fw;
-        int tx;
-        int ty   	= by  + (bh - fh) / 2 + (press ? 1 : 0);
-
-        if (wg->icon.loaded)
-        {
-            tx = bx + 42 + (press ? 1 : 0);
-        }
-        else
-        {
-            tx = bx + (TB_BTN_W - tw) / 2 + (press ? 1 : 0);
-        }
-        // draw chars one by one into the comp backbuffer
-        for (int ci = 0; ci < nlen; ci++)
-        {
-            unsigned char c = (unsigned char)label[ci] & 0x7Fu;
-            for (int row = 0; row < fh; row++)
-            {
-                uint16_t bits = font_glyph(FONT8X12_BOLD, c, row);
-                for (int col = 0; col < fw; col++)
-                {
-                    unsigned int bg_col = (hov || press) ? TB_BUTTON_BG : TB_BACKGROUND;
-                    unsigned int color = (bits & (1u << col)) ? TB_WHITE : bg_col;
-                    comp_set(tx + ci * fw + col, ty + row, color);
-                }
-            }
-        }
+        unsigned int text_bg = (hov || press) ? TB_BUTTON_BG : TB_BACKGROUND;
+        draw_widget_content(wg, bx, by, TB_BTN_W, bh, press, text_bg);
     }
 
     startmenu_draw(mx, my, btn_down);
@@ -568,9 +583,10 @@ static void _process_tbcmd_line(const char *line)
         _next_tok(&p, tok2, sizeof(tok2));      // text
 
         int idx = find_widget_by_name(tok1);
+        if (idx < 0) return;
+
         tb_widget_t *wg = &s_widgets[idx];
 
-        if (idx < 0) return;
         if (wg->type != TB_WIDGET_LABEL && wg->type != TB_WIDGET_UPDATED_LABEL) return;
 
         strncpy(wg->text, tok2, TB_WIDGET_TEXTLEN - 1);
@@ -586,10 +602,9 @@ static void _process_tbcmd_line(const char *line)
         _next_tok(&p, tok4, sizeof(tok4));          // h
 
         int idx = find_widget_by_name(tok1);
-        tb_widget_t *wg = &s_widgets[idx];
-
         if (idx < 0) return;
 
+        tb_widget_t *wg = &s_widgets[idx];
         pid_t  pid = (pid_t)_atoi(tok2);
         int    pw  = _atoi(tok3);
         int    ph  = _atoi(tok4);
@@ -619,9 +634,9 @@ void taskbar_cmd_process(void)
     static char buf[4096];
 
     int fd = open(DT_TB_CMD, O_RDONLY);
-    int n = (int)read(fd, buf, sizeof(buf) - 1);
     if (fd < 0) return;
 
+    int n = (int)read(fd, buf, sizeof(buf) - 1);
     close(fd);
     if (n <= 0) return;
 

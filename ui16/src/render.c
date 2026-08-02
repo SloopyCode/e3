@@ -36,7 +36,7 @@ static void ui16__renderNode(ui16_node_t *node, const ui16_renderer_t *renderer)
         node->box_x,
         node->box_y,
         node->text,
-        0xFFFFFFFFu,
+        node->style.color,
         ui16__resolveFont(node)
     );
 
