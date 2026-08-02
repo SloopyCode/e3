@@ -17,6 +17,7 @@
 #define ROW_MAX 4096
 static unsigned int row_buf[ROW_MAX];
 
+#include "icons.h"
 
 static int slen(const char *s) { int n = 0; while (s[n]) n++; return n; }
 
@@ -148,7 +149,7 @@ static void blit_win_buf(
 }
 
 //pubs
-void render_win(dt_win_t *w)
+void render_win(dt_win_t *w, int mx, int my)
 {
     int wx = w->x, wy = w->y;
     int ww = w->w, wh = w->h;
@@ -162,6 +163,18 @@ void render_win(dt_win_t *w)
     (void)cw;
 
     int has_title = !(style & DT_NOTITLE);
+
+    int hover_close = (
+    	mx >= wx + DT_CLOSE_X && mx < wx + DT_CLOSE_X + DT_CLOSE_SZ &&
+     	my >= wy + DT_CLOSE_Y && my < wy + DT_CLOSE_Y + DT_CLOSE_SZ
+    );
+
+    #if !ENABLE_TILING
+        int hover_max = (
+        	mx >= wx + DT_MAX_X && mx < wx + DT_MAX_X + DT_MAX_SZ &&
+         	my >= wy + DT_MAX_Y && my < wy + DT_MAX_Y + DT_MAX_SZ
+        );
+    #endif
 
     blit_win_buf(w, style, has_title, wx, wy);
 
@@ -182,12 +195,17 @@ void render_win(dt_win_t *w)
     //int has_title = !(style & DT_NOTITLE);
     int tw = slen(w->title) * DT_FW;
 
-    // clamp title width so it fits inside the window
-    int title_area = ww - DT_CLOSE_X - DT_CLOSE_SZ - 4 - 4;
+    #if ENABLE_TILING
+        int deco_end = DT_CLOSE_X + DT_CLOSE_SZ;
+    #else
+        int deco_end = DT_MAX_X + DT_MAX_SZ;
+    #endif
+
+    int title_area = ww - deco_end - 4 - 4;
     if (tw > title_area) tw = title_area;
 
     int tx = (ww - tw) / 2;
-    if (tx < DT_CLOSE_X + DT_CLOSE_SZ + 2) tx = DT_CLOSE_X + DT_CLOSE_SZ + 2;
+    if (tx < deco_end + 2) tx = deco_end + 2;
 
     int sl = tx - 4;
     int sr = tx + tw + 4;
@@ -227,23 +245,45 @@ void render_win(dt_win_t *w)
             {
                 int bx  = DT_CLOSE_X;
                 int bry = dy - DT_CLOSE_Y;
-                if (bry >= 0 && bry <= DT_CLOSE_SZ)
+                if (bry >= 0 && bry < DT_CLOSE_SZ)
                 {
-                    if (bry == 0 || bry == DT_CLOSE_SZ)
-                    {
-                        for (
-                        	int dx = bx; dx <= bx + DT_CLOSE_SZ && dx < ROW_MAX; dx++
-                        ) row_buf[dx] = WIN_BLACK;
-                    } else
-                    {
-                        if (bx < ROW_MAX) row_buf[bx] = WIN_BLACK;
-                        if (bx + DT_CLOSE_SZ < ROW_MAX) row_buf[bx + DT_CLOSE_SZ] = WIN_BLACK;
-                        for (
-                        	int dx = bx + 1; dx < bx + DT_CLOSE_SZ && dx < ROW_MAX; dx++
-                        ) row_buf[dx] = WIN_FACE;
+                    for (
+                    	int dx = 0; dx < DT_CLOSE_SZ && (bx + dx) < ROW_MAX; dx++
+                    ) {
+                        unsigned int icon_px = dt_icon_close_px[bry * DT_ICON_W + dx];
+                        unsigned int out;
+
+                        // hover mechanism for icons
+                        if (!(icon_px >> 24)) out = title_bg; // transparent
+                        else if (icon_px == DT_ICON_FILL) out = hover_close ? DT_ICON_FILL_HOVER : DT_ICON_FILL;
+                        else out = icon_px;
+
+                        row_buf[bx + dx] = out;
                     }
                 }
             }
+
+            #if !ENABLE_TILING
+                {
+                    int mbx  = DT_MAX_X;
+                    int mbry = dy - DT_MAX_Y;
+                    if (mbry >= 0 && mbry < DT_MAX_SZ)
+                    {
+                        for (
+                        	int dx = 0; dx < DT_MAX_SZ && (mbx + dx) < ROW_MAX; dx++
+                        ) {
+                            unsigned int icon_px = dt_icon_maximize_px[mbry * DT_ICON_W + dx];
+                            unsigned int out;
+
+                            if (!(icon_px >> 24)) out = title_bg; // transparent
+                            else if (icon_px == DT_ICON_FILL) out = hover_max ? DT_ICON_FILL_HOVER : DT_ICON_FILL;
+                            else out = icon_px; // border pixel, unaffected by hover
+
+                            row_buf[mbx + dx] = out;
+                        }
+                    }
+                }
+            #endif
 
             flush_row(wx, ay, ww);
             continue;
@@ -281,7 +321,7 @@ static int rects_intersect(int ax,int ay,int aw,int ah,int bx,int by,int bw,int 
     );
 }
 
-void render_all(void)
+void render_all(int mx, int my)
 {
     int order[DT_WIN_MAX];
     int count = 0;
@@ -311,11 +351,11 @@ void render_all(void)
     for (i = 0; i < count; i++)
     {
         dt_win_t *wn = win_get(order[i]);
-        if (wn) render_win(wn);
+        if (wn) render_win(wn, mx, my);
     }
 }
 
-void render_all_in_rect(int rx, int ry, int rw, int rh)
+void render_all_in_rect(int rx, int ry, int rw, int rh, int mx, int my)
 {
     int order[DT_WIN_MAX];
     int count = 0;
@@ -350,6 +390,6 @@ void render_all_in_rect(int rx, int ry, int rw, int rh)
         if (!wn) continue;
         if (!rects_intersect(wn->x, wn->y, wn->w, wn->h, rx, ry, rw, rh)) continue;
 
-        render_win(wn);
+        render_win(wn, mx, my);
     }
 }

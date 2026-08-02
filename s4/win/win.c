@@ -79,6 +79,12 @@ int win_add(
             wins[i].buf_h = 0;
             wins[i].shm_id  = 0;
 
+            wins[i].maximized = 0;
+            wins[i].premax_x = x;
+            wins[i].premax_y = y;
+            wins[i].premax_w = w;
+            wins[i].premax_h = h;
+
             scopy(wins[i].title, title, DT_TITLE_MAX);
             compute_home(&wins[i]);
 
@@ -209,6 +215,69 @@ int win_hit_close(int idx, int mx, int my)
     	mx >= bx && mx < bx + DT_CLOSE_SZ &&
         my >= by && my < by + DT_CLOSE_SZ
     ;
+}
+
+int win_hit_maximize(int idx, int mx, int my)
+{
+	#if ENABLE_TILING
+		// tiling mode auto maximise so the button isnt needed
+		(void)idx;
+		(void)mx;
+		(void)my;
+		return 0;
+	#else
+		dt_win_t *w = win_get(idx);
+		if (!w || (w->style & DT_POPUP) || (w->style & DT_NOTITLE)) return 0;
+
+		int bx = w->x + DT_MAX_X;
+		int by = w->y + DT_MAX_Y;
+		return
+		   	mx >= bx && mx < bx + DT_MAX_SZ &&
+		    my >= by && my < by + DT_MAX_SZ
+		;
+	#endif
+}
+
+void win_maximize(int idx, int scr_w, int scr_h, int taskbar_h)
+{
+    dt_win_t *w = win_get(idx);
+    if (!w) return;
+
+    if (!w->maximized)
+    {
+        w->premax_x = w->x;
+        w->premax_y = w->y;
+        w->premax_w = w->w;
+        w->premax_h = w->h;
+    }
+
+    w->x = 0;
+    w->y = 0;
+    w->w = scr_w;
+    w->h = scr_h - taskbar_h;
+    w->maximized = 1;
+
+    compute_home(w);
+}
+
+void win_toggle_maximize(int idx, int scr_w, int scr_h, int taskbar_h)
+{
+    dt_win_t *w = win_get(idx);
+    if (!w) return;
+
+    if (w->maximized)
+    {
+        w->x = w->premax_x;
+        w->y = w->premax_y;
+        w->w = w->premax_w;
+        w->h = w->premax_h;
+        w->maximized = 0;
+
+        compute_home(w);
+        return;
+    }
+
+    win_maximize(idx, scr_w, scr_h, taskbar_h);
 }
 
 dt_win_t *win_get(int idx)

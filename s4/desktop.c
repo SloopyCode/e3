@@ -462,6 +462,7 @@ int main(void)
     shm_host_init();
 
     input_set_screen_size(internal_w, internal_h);
+    cmd_set_screen_size(internal_w, internal_h);
     input_init();
 
     comp_init(fb, internal_w, internal_h);
@@ -578,7 +579,7 @@ int main(void)
 
             if (struct_changed || is.sel_active || was_active)
             {
-                render_all();
+                render_all(is.cx, is.cy);
                 for (int i = 0; i < DT_WIN_MAX; i++)
                 {
                     dt_win_t *wn = win_get(i);
@@ -590,7 +591,8 @@ int main(void)
                 render_all_in_rect(
                 	g_dirty_x0, g_dirty_y0,
                     g_dirty_x1 - g_dirty_x0,
-                    g_dirty_y1 - g_dirty_y0
+                    g_dirty_y1 - g_dirty_y0,
+                    is.cx, is.cy
                 );
             }
 

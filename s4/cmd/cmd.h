@@ -22,3 +22,4 @@ typedef struct {
 
 void cmd_process(cmd_result_t *result);
 int cmd_check_dirty(void);
+void cmd_set_screen_size(int w, int h);

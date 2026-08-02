@@ -18,6 +18,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+static int g_scr_w = 1280;
+static int g_scr_h = 720;
+
+void cmd_set_screen_size(int w, int h)
+{
+    g_scr_w = w;
+    g_scr_h = h;
+}
+
 static int str_to_int(const char *s)
 {
     int neg = 0, v = 0;
@@ -88,6 +97,14 @@ static void process_line(const char *line, cmd_result_t *result)
         title[ti] = '\0';
 
         int idx = win_add(pid, title, x, y, w, h, style);
+
+        #if ENABLE_TILING
+            if (!(style & DT_POPUP) && !(style & DT_NOTITLE))
+            {
+                win_maximize(idx, g_scr_w, g_scr_h, TB_H);
+            }
+        #endif
+
         win_focus(idx);
         result->win_changed = 1;
         {

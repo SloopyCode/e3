@@ -117,6 +117,7 @@
 #define SM_BTN_ROW_Y  (SM_H - SM_BTN_H - SM_BTN_PAD)
 
 #define DT_ENABLE_RESIZING 1
+#define ENABLE_TILING 0
 
 // window title bar
 #define DT_TITLE_ACT 0xFFB0D0C0u  // green; when focused
@@ -125,13 +126,17 @@
 #define DT_TITLE_TXT 0xFFFFFFFFu  // text of titlebar
 
 // titlebar config
-#define DT_TITLE_H  18 // tot. inc. high
-#define DT_TITLE_PB 2  // pad. top
+#define DT_TITLE_H  20 // tot. inc. high
+#define DT_TITLE_PB 5  // pad. top
 #define DT_BORDER   1  // border width
 
 #define DT_CLOSE_X  7  // x offset
-#define DT_CLOSE_Y  5  // y offset
-#define DT_CLOSE_SZ 8 // square size
+#define DT_CLOSE_Y  6  // y offset
+#define DT_CLOSE_SZ 10 // square size
+
+#define DT_MAX_X (DT_CLOSE_X + DT_CLOSE_SZ + 4)
+#define DT_MAX_Y DT_CLOSE_Y
+#define DT_MAX_SZ DT_CLOSE_SZ
 
 // font rendering
 #define DT_FW 8

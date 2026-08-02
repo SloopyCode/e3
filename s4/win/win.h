@@ -40,6 +40,12 @@ typedef struct
     int buf_w;
     int buf_h;
     unsigned long long shm_id;
+
+    int maximized;
+    int premax_x;
+    int premax_y;
+    int premax_w;
+    int premax_h;
 } dt_win_t;
 
 int win_add(
@@ -57,6 +63,10 @@ int win_find_pid(pid_t pid);
 int win_hit(int idx, int mx, int my);
 int win_hit_title(int idx, int mx, int my);
 int win_hit_close(int idx, int mx, int my);
+int win_hit_maximize(int idx, int mx, int my);
+
+void win_toggle_maximize(int idx, int scr_w, int scr_h, int taskbar_h);
+void win_maximize(int idx, int scr_w, int scr_h, int taskbar_h);
 
 dt_win_t *win_get(int idx);
 int win_count(void);

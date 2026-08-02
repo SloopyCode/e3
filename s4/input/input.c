@@ -45,6 +45,9 @@ static int g_band_sy = 0;
 static pid_t g_focused_pid = 0;
 static int g_focused_idx = -1;
 
+static pid_t g_hover_pid = 0;
+static int g_hover_btn = 0; // 1 close, 2 max
+
 drag_info_t g_input_drag_prev;
 
 static int g_scr_w = 1280, g_scr_h = 720;
@@ -164,6 +167,32 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
             break;
         }
         cur_set_type(hov_cur);
+
+        int hov_idx = -1, hov_z = -1;
+        for (int i = 0; i < DT_WIN_MAX; i++)
+        {
+            dt_win_t *wn = win_get(i);
+            if (!wn) continue;
+            if (win_hit(i, mx, my) && wn->z > hov_z) { hov_z = wn->z; hov_idx = i; }
+        }
+
+        pid_t new_hover_pid = 0;
+        int new_hover_btn = 0;
+        if (hov_idx >= 0)
+        {
+            dt_win_t *wn = win_get(hov_idx);
+            new_hover_pid = wn ? wn->pid : 0;
+
+            if (win_hit_close(hov_idx, mx, my)) new_hover_btn = 1;
+            else if (win_hit_maximize(hov_idx, mx, my)) new_hover_btn = 2;
+        }
+
+        if (new_hover_btn != g_hover_btn || new_hover_pid != g_hover_pid)
+        {
+            g_hover_btn = new_hover_btn;
+            g_hover_pid = new_hover_pid;
+            changed = 1;
+        }
     }
 
     // button press
@@ -200,7 +229,21 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
 
             int edge = win_get_resize_edge(top_idx, mx, my);
 
-            if (win_hit_close(top_idx, mx, my))
+            if (win_hit_maximize(top_idx, mx, my))
+            {
+                dt_win_t *wn = win_get(top_idx);
+                if (wn)
+                {
+                    g_input_drag_prev.valid = 1;
+                    g_input_drag_prev.pid = wn->pid;
+                    g_input_drag_prev.wx  = wn->x;
+                    g_input_drag_prev.wy  = wn->y;
+                    g_input_drag_prev.ww  = wn->w;
+                    g_input_drag_prev.wh  = wn->h;
+                }
+                win_toggle_maximize(top_idx, g_scr_w, g_scr_h, TB_H);
+                changed = 1;
+            } else if (win_hit_close(top_idx, mx, my))
             {
                 dt_win_t *wn = win_get(top_idx);
                 if (wn) {
