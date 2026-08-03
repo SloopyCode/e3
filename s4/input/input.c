@@ -19,6 +19,8 @@
 #include <unistd.h>
 
 static int g_last_btn = 0;
+static int g_last_rbtn = 0;
+static int g_last_mbtn = 0;
 static int g_drag_idx = -1;
 static int g_drag_ox = 0;
 static int g_drag_oy = 0;
@@ -457,6 +459,8 @@ int input_drain(int mfd, input_state_t *is)
     int mx = is->cx;
     int my = is->cy;
     int btn_left = g_last_btn;
+    int btn_right  = g_last_rbtn;
+    int btn_middle = g_last_mbtn;
 
     while ((int)read(mfd, &ev, sizeof(ev)) == (int)sizeof(ev))
     {
@@ -474,6 +478,8 @@ int input_drain(int mfd, input_state_t *is)
         } else if (ev.type == INPUT_EV_KEY)
         {
             if (ev.code == INPUT_BTN_LEFT)  btn_left = ev.value;
+            else if (ev.code == INPUT_BTN_RIGHT)  btn_right  = ev.value;
+            else if (ev.code == INPUT_BTN_MIDDLE) btn_middle = ev.value;
         }
     }
 
@@ -483,14 +489,47 @@ int input_drain(int mfd, input_state_t *is)
     if (mx >= g_scr_w) mx = g_scr_w - 1;
     if (my >= g_scr_h) my = g_scr_h - 1;
 
+    g_last_rbtn = btn_right;
+    g_last_mbtn = btn_middle;
+
     mouse_state_t synth =
     {
     	.abs_x = mx,
      	.abs_y = my,
-      	.buttons = btn_left ? 1 : 0
+        .buttons =
+            (btn_left   ? DT_BTN_LEFT   : 0) |
+            (btn_right  ? DT_BTN_RIGHT  : 0) |
+            (btn_middle ? DT_BTN_MIDDLE : 0)
     };
 
     if (handle_one(&synth, is)) is->win_changed = 1;
 
     return 1;
+}
+
+int input_drain_keyboard(int kfd)
+{
+    input_event_t ev;
+    int got = 0;
+
+    while ((int)read(kfd, &ev, sizeof(ev)) == (int)sizeof(ev))
+    {
+        got = 1;
+
+        if (ev.type != INPUT_EV_KEY) continue;
+        if (g_focused_pid <= 0 || g_focused_idx < 0) continue;
+
+        dt_win_t *fw = win_get(g_focused_idx);
+        if (!fw || fw->pid != g_focused_pid) continue;
+
+        dt_event_t kev;
+        if (dt_make_key_event(
+            (unsigned int)ev.code,
+            ev.modifiers,
+            (unsigned char)(ev.value != 0),
+            &kev
+        )) dt_dispatch_event(g_focused_pid, &kev);
+    }
+
+    return got;
 }

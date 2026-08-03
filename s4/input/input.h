@@ -57,5 +57,6 @@ void input_frame_begin(input_state_t *is);
 
 void input_init(void);
 int input_drain(int mfd, input_state_t *is);
+int input_drain_keyboard(int kfd);
 int win_get_resize_edge(int idx, int mx, int my);
 void input_set_screen_size(int w, int h);

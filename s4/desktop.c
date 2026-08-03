@@ -437,6 +437,8 @@ int main(void)
     int fb = open(FRAMEBUFFER_DEV, O_RDWR);
     printf(":: reading mouse...\n");
     int mfd = open(MOUSE_DEV, O_RDONLY);
+    printf(":: reading keyboard...\n");
+    int kfd = open(KEYBOARD_DEV, O_RDONLY);
 
     if (fb < 0 || mfd < 0) return 1;
 
@@ -534,6 +536,7 @@ int main(void)
             need_cur = 1;
             write_cursor_pos(is.cx, is.cy);
         }
+        input_drain_keyboard(kfd);
 
         int struct_changed = cr.win_changed || is.win_changed;
         if (is.win_changed)
