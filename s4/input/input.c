@@ -47,6 +47,7 @@ static int g_focused_idx = -1;
 
 static pid_t g_hover_pid = 0;
 static int g_hover_btn = 0; // 1 close, 2 max
+static int g_tb_hover_id = 0;
 
 drag_info_t g_input_drag_prev;
 
@@ -185,6 +186,7 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
 
             if (win_hit_close(hov_idx, mx, my)) new_hover_btn = 1;
             else if (win_hit_maximize(hov_idx, mx, my)) new_hover_btn = 2;
+            else if (win_hit_minimize(hov_idx, mx, my)) new_hover_btn = 3;
         }
 
         if (new_hover_btn != g_hover_btn || new_hover_pid != g_hover_pid)
@@ -243,7 +245,7 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
                 }
                 win_toggle_maximize(top_idx, g_scr_w, g_scr_h, TB_H);
                 changed = 1;
-            } else if (win_hit_close(top_idx, mx, my))
+            } else if (win_hit_close(top_idx, mx, my) || win_hit_minimize(top_idx, mx, my))
             {
                 dt_win_t *wn = win_get(top_idx);
                 if (wn) {

@@ -238,6 +238,19 @@ int win_hit_maximize(int idx, int mx, int my)
 	#endif
 }
 
+int win_hit_minimize(int idx, int mx, int my)
+{
+    dt_win_t *w = win_get(idx);
+    if (!w || (w->style & DT_POPUP) || (w->style & DT_NOTITLE)) return 0;
+
+    int bx = w->x + DT_MIN_X;
+    int by = w->y + DT_MIN_Y;
+    return
+    	mx >= bx && mx < bx + DT_MIN_SZ &&
+        my >= by && my < by + DT_MIN_SZ
+    ;
+}
+
 void win_maximize(int idx, int scr_w, int scr_h, int taskbar_h)
 {
     dt_win_t *w = win_get(idx);

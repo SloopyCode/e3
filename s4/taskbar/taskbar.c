@@ -112,12 +112,12 @@ static const char *_next_tok(const char **p, char *out, int outsz)
 
 static int start_btn_x(void)
 {
-    return TB_BTN_PAD;
+    return TB_BTN_PAD + TB_STARTBUTTON_PAD_LEFT;
 }
 
 static int btn_x(int i)
 {
-    return TB_BTN_PAD + TB_START_W + TB_BTN_PAD + i * (TB_BTN_W + TB_BTN_PAD);
+    return start_btn_x() + TB_START_W + TB_BTN_PAD + i * (TB_BTN_W + TB_BTN_PAD);
 }
 
 static int hit_start_btn(int mx, int my)
@@ -359,22 +359,22 @@ static void draw_start_button(int y, int mx, int my, int btn_down)
     /* also show as pressed when menu is open */
     int press = (hov && btn_down) || startmenu_is_open();
 
-    comp_fill(bx, by, TB_START_W, bh, TB_BUTTON_BG);
+    //comp_fill(bx, by, TB_START_W, bh, TB_BUTTON_BG);
 
     if (hov || press)
     {
         unsigned int col = press ? TB_BTN_TOP : TB_LIGHT;
-
+        /*
         comp_fill(bx, by,                            TB_START_W,  TB_BORDER_W, col);
         comp_fill(bx, by + bh - TB_BORDER_W,         TB_START_W,  TB_BORDER_W, col);
         comp_fill(bx, by,                            TB_BORDER_W, bh,          col);
-        comp_fill(bx + TB_START_W - TB_BORDER_W, by, TB_BORDER_W, bh,          col);
+        comp_fill(bx + TB_START_W - TB_BORDER_W, by, TB_BORDER_W, bh,          col);*/
 
         comp_fill(bx, by, TB_START_W, bh, TB_BUTTON_BG);
-        comp_fill(bx, by, TB_START_W, 2,  TB_TOP_BORDER);
+        //comp_fill(bx, by, TB_START_W, 2,  TB_TOP_BORDER);
     }
 
-    draw_widget_content(&s_start_widget, bx, by, TB_START_W, bh, press, TB_BUTTON_BG);
+    draw_widget_content(&s_start_widget, bx, by, TB_START_W, bh, press, TB_BACKGROUND);
 }
 
 void taskbar_draw(int mx, int my, int btn_down)
@@ -390,6 +390,15 @@ void taskbar_draw(int mx, int my, int btn_down)
 
     draw_start_button(y, mx, my, btn_down);
 
+    divider: {
+        int divider_x = start_btn_x() + (TB_START_W + TB_STARTBUTTON_PAD_RIGHT);
+        int divider_y = y + 4;
+        int divider_h = TB_H - 8;
+
+        comp_fill(divider_x, divider_y, 1, divider_h, TB_TOP_BORDER);
+        comp_fill(divider_x + 1, divider_y, 1, divider_h, TB_LIGHT);
+    }
+
     for (int i = 0; i < s_widget_count; i++)
     {
         tb_widget_t *wg = &s_widgets[i];
@@ -404,7 +413,7 @@ void taskbar_draw(int mx, int my, int btn_down)
         //const char *label = (wg->type == TB_WIDGET_APP) ? wg->name : wg->text;
 
         // button face
-        comp_fill(bx, by, TB_BTN_W, bh, TB_BUTTON_BG);
+        //comp_fill(bx, by, TB_BTN_W, bh, TB_BUTTON_BG);
 
         // win95 style raised/pressed borders
        	/*{

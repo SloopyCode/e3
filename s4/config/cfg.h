@@ -23,6 +23,14 @@
 	#define SYSTEM "/system/desktop/" //the path to the desktop in the system
 	#define CFGFILE   SYSTEM "desktop.conf"
 	#define ENTRYFILE SYSTEM "entries.json"
+#elif __ascentos__
+    #define MOUSE_DEV    "/dev/mouse"
+	#define KEYBOARD_DEV "/dev/kbd"
+	#define FRAMEBUFFER_DEV "/dev/fb0"
+
+	#define SYSTEM "/system/desktop/"
+	#define CFGFILE   SYSTEM "desktop.conf"
+	#define ENTRYFILE SYSTEM "entries.json"
 #elif __has_include
 	// idfk if this works... rn i cant test it cuz doccrOS isnt finished
 	// but i think it works in newer gcc vrsions __has_include is supported ig.... :/
@@ -42,7 +50,8 @@
     #error "Unsupported operating system"
 #endif
 
-#define DEFAULT_ICON SYSTEM "/icons/exec.bmp"
+#define DEFAULT_ICON SYSTEM "icons/exec.bmp"
+#define STARTBUTTON_ICON SYSTEM "icons/start.bmp"
 
 #define DT_BG 0xFF008080u  // win95/98 teal ig its a fallback
 
@@ -61,7 +70,9 @@
 #define TB_ENTRY_NAMELEN 32
 #define TB_ENTRY_EXECLEN 64
 #define TB_MAX_ENTRIES 10
-#define TB_START_W 60
+#define TB_START_W 22
+#define TB_STARTBUTTON_PAD_LEFT 5
+#define TB_STARTBUTTON_PAD_RIGHT 5
 
 #define MAX_APPICON_SIZE 22
 
@@ -126,17 +137,22 @@
 #define DT_TITLE_TXT 0xFFFFFFFFu  // text of titlebar
 
 // titlebar config
-#define DT_TITLE_H  20 // tot. inc. high
+#define DT_TITLE_H  21 // tot. inc. high
 #define DT_TITLE_PB 5  // pad. top
 #define DT_BORDER   1  // border width
 
-#define DT_CLOSE_X  7  // x offset
-#define DT_CLOSE_Y  6  // y offset
-#define DT_CLOSE_SZ 10 // square size
+#define DT_CLOSE_X  5  // x offset
+#define DT_CLOSE_Y  5  // y offset
+#define DT_CLOSE_SZ 13 // square size
 
 #define DT_MAX_X (DT_CLOSE_X + DT_CLOSE_SZ + 4)
 #define DT_MAX_Y DT_CLOSE_Y
 #define DT_MAX_SZ DT_CLOSE_SZ
+
+// not minimize this button will put the window into taskbar, like fully fully minimize
+#define DT_MIN_X (DT_MAX_X + DT_MAX_SZ + 4)
+#define DT_MIN_Y DT_CLOSE_Y
+#define DT_MIN_SZ DT_CLOSE_SZ
 
 // font rendering
 #define DT_FW 8

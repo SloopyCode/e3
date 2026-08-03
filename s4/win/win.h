@@ -64,6 +64,7 @@ int win_hit(int idx, int mx, int my);
 int win_hit_title(int idx, int mx, int my);
 int win_hit_close(int idx, int mx, int my);
 int win_hit_maximize(int idx, int mx, int my);
+int win_hit_minimize(int idx, int mx, int my);
 
 void win_toggle_maximize(int idx, int scr_w, int scr_h, int taskbar_h);
 void win_maximize(int idx, int scr_w, int scr_h, int taskbar_h);

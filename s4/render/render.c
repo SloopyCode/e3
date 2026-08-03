@@ -176,6 +176,11 @@ void render_win(dt_win_t *w, int mx, int my)
         );
     #endif
 
+    int hover_min = (
+    	mx >= wx + DT_MIN_X && mx < wx + DT_MIN_X + DT_MIN_SZ &&
+     	my >= wy + DT_MIN_Y && my < wy + DT_MIN_Y + DT_MIN_SZ
+    );
+
     blit_win_buf(w, style, has_title, wx, wy);
 
     if (style & DT_POPUP)
@@ -195,12 +200,9 @@ void render_win(dt_win_t *w, int mx, int my)
     //int has_title = !(style & DT_NOTITLE);
     int tw = slen(w->title) * DT_FW;
 
-    #if ENABLE_TILING
-        int deco_end = DT_CLOSE_X + DT_CLOSE_SZ;
-    #else
-        int deco_end = DT_MAX_X + DT_MAX_SZ;
-    #endif
-
+    // clamp title width so it fits inside the window, leaving room for the
+    // close, maximize (unless tiling) and minimize buttons
+    int deco_end = DT_MIN_X + DT_MIN_SZ;
     int title_area = ww - deco_end - 4 - 4;
     if (tw > title_area) tw = title_area;
 
@@ -269,10 +271,12 @@ void render_win(dt_win_t *w, int mx, int my)
                     int mbry = dy - DT_MAX_Y;
                     if (mbry >= 0 && mbry < DT_MAX_SZ)
                     {
+                        const unsigned int *icon = w->maximized ? dt_icon_restore_px : dt_icon_maximize_px;
+
                         for (
                         	int dx = 0; dx < DT_MAX_SZ && (mbx + dx) < ROW_MAX; dx++
                         ) {
-                            unsigned int icon_px = dt_icon_maximize_px[mbry * DT_ICON_W + dx];
+                            unsigned int icon_px = icon[mbry * DT_ICON_W + dx];
                             unsigned int out;
 
                             if (!(icon_px >> 24)) out = title_bg; // transparent
@@ -284,6 +288,26 @@ void render_win(dt_win_t *w, int mx, int my)
                     }
                 }
             #endif
+
+            {
+                int nbx  = DT_MIN_X;
+                int nbry = dy - DT_MIN_Y;
+                if (nbry >= 0 && nbry < DT_MIN_SZ)
+                {
+                    for (
+                    	int dx = 0; dx < DT_MIN_SZ && (nbx + dx) < ROW_MAX; dx++
+                    ) {
+                        unsigned int icon_px = dt_icon_minimize_px[nbry * DT_ICON_W + dx];
+                        unsigned int out;
+
+                        if (!(icon_px >> 24)) out = title_bg; // transparent
+                        else if (icon_px == DT_ICON_FILL) out = hover_min ? DT_ICON_FILL_HOVER : DT_ICON_FILL;
+                        else out = icon_px;
+
+                        row_buf[nbx + dx] = out;
+                    }
+                }
+            }
 
             flush_row(wx, ay, ww);
             continue;
