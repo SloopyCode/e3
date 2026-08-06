@@ -117,7 +117,12 @@ static int start_btn_x(void)
 
 static int btn_x(int i)
 {
-    return start_btn_x() + TB_START_W + TB_BTN_PAD + i * (TB_BTN_W + TB_BTN_PAD);
+    return start_btn_x()
+         + TB_START_W
+         + TB_STARTBUTTON_PAD_RIGHT
+         + TB_BTN_PAD
+         + 2 /*extra space */
+         + i * (TB_BTN_W + TB_BTN_PAD);
 }
 
 static int hit_start_btn(int mx, int my)
@@ -233,22 +238,16 @@ static void draw_widget_content(
     if (show_icon)
     {
         const bmp_image_t *img = &wg->icon.image;
-        int draw_w = img->width;
-        int draw_h = img->height;
 
-        // icon cant be bigger than max size so it needs to be downscaled
-        if (draw_w > icon_slot || draw_h > icon_slot)
-        {
-            float sx = (float)icon_slot / (float)draw_w;
-            float sy = (float)icon_slot / (float)draw_h;
-            float s  = (sx < sy) ? sx : sy;
+        float sx = (float)icon_slot / (float)img->width;
+        float sy = (float)icon_slot / (float)img->height;
+        float s  = (sx < sy) ? sx : sy;
 
-            draw_w = (int)(draw_w * s);
-            draw_h = (int)(draw_h * s);
+        int draw_w = (int)(img->width * s);
+        int draw_h = (int)(img->height * s);
 
-            if (draw_w < 1) draw_w = 1;
-            if (draw_h < 1) draw_h = 1;
-        }
+        if (draw_w < 1) draw_w = 1;
+        if (draw_h < 1) draw_h = 1;
 
         // if theres also text the icon is left, otherwise its centered
         int slot_x = show_text ? (bx + 4) : (bx + (bw - icon_slot) / 2);
@@ -257,14 +256,7 @@ static void draw_widget_content(
         int ix = slot_x + (icon_slot - draw_w) / 2;
         int iy = slot_y + (icon_slot - draw_h) / 2;
 
-        if (draw_w == img->width && draw_h == img->height)
-        {
-            bmp_draw(img, ix, iy);
-        }
-        else
-        {
-            bmp_draw_scaled(img, ix, iy, draw_w, draw_h);
-        }
+        bmp_draw_scaled(img, ix, iy, draw_w, draw_h);
     }
 
     if (show_text)
@@ -353,8 +345,8 @@ int taskbar_add_widget(const tb_widget_t *w)
 static void draw_start_button(int y, int mx, int my, int btn_down)
 {
     int bx    = start_btn_x();
-    int by    = y + TB_BTN_VPAD;
-    int bh    = TB_H - (TB_BTN_VPAD * 2);
+    int by    = y + TB_BTN_VPAD + 1;
+    int bh    = 22;
     int hov   = hit_start_btn(mx, my);
     /* also show as pressed when menu is open */
     int press = (hov && btn_down) || startmenu_is_open();
@@ -396,7 +388,7 @@ void taskbar_draw(int mx, int my, int btn_down)
         int divider_h = TB_H - 8;
 
         comp_fill(divider_x, divider_y, 1, divider_h, TB_TOP_BORDER);
-        comp_fill(divider_x + 1, divider_y, 1, divider_h, TB_LIGHT);
+        //comp_fill(divider_x + 1, divider_y, 1, divider_h, TB_LIGHT);
     }
 
     for (int i = 0; i < s_widget_count; i++)
@@ -439,10 +431,10 @@ void taskbar_draw(int mx, int my, int btn_down)
 	        {
 	            unsigned int col = press ? TB_BTN_TOP : TB_LIGHT;
 
-	            comp_fill(bx, by,                          TB_BTN_W,    TB_BORDER_W, col);
+	            /*comp_fill(bx, by,                          TB_BTN_W,    TB_BORDER_W, col);
 	            comp_fill(bx, by + bh - TB_BORDER_W,       TB_BTN_W,    TB_BORDER_W, col);
 	            comp_fill(bx, by,                          TB_BORDER_W, bh,          col);
-	            comp_fill(bx + TB_BTN_W - TB_BORDER_W, by, TB_BORDER_W, bh,          col);
+	            comp_fill(bx + TB_BTN_W - TB_BORDER_W, by, TB_BORDER_W, bh,          col);*/
 
 				comp_fill(bx, by, TB_BTN_W, bh, TB_BUTTON_BG);
 
@@ -490,25 +482,14 @@ int taskbar_click(int mx, int my)
         if (wg->type == TB_WIDGET_APP)
         {
         	if (!file_exists(wg->exec)) return 1;
-        	// just spawn and forget, no wait
-            pid_t pid = fork();
+            pid_t pid = (pid_t)spawn(wg->exec);
 
-            printf("[TASKBAR] fork() returned pid=%d\n", (int)pid);
+            printf("[TASKBAR] spawn returned pid= %d \n", (int)pid);
 
             if (pid < 0)
             {
                 printf("[TASKBAR] fork FAILED \n");
                 return 1;
-            }
-
-            if (pid == 0)
-            {
-                char *argv[] = { wg->exec, (char *)0 };
-                char *envp[] = { (char *)0 };
-
-                printf("[TASKBAR] launching '%s' (pid will be child)\n", wg->exec);
-                execve(wg->exec, argv, envp);
-                _exit(1);
             }
 
             return 1;
@@ -521,15 +502,8 @@ int taskbar_click(int mx, int my)
 
             if (wg->exec[0] != '\0' && file_exists(wg->exec))
             {
-                pid_t pid = fork();
-                if (pid == 0) {
-                    char *argv[] = { wg->exec, (char *)0 };
-                    char *envp[] = { (char *)0 };
-
-                    printf("[TASKBAR] launching '%s' (pid will be child)\n", wg->exec);
-                    execve(wg->exec, argv, envp);
-                    _exit(1);
-                }
+                pid_t pid = (pid_t)spawn(wg->exec);
+                if (pid < 0) return 1;
                 //when app sends R cmd to /tmp/dt/tbcmd
                 wg->popup_pid = pid;
 

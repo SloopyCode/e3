@@ -42,28 +42,14 @@ static void launch_poweroff(void)
 {
 	printf(":: sm: launching poweroff...");
     if (!file_exists(POWEROFF_LAUNCHPAD_PATH)) return;
-    pid_t process_id = fork();
-    if (process_id == 0)
-    {
-        char *arguments[] = { POWEROFF_LAUNCHPAD_PATH, (char *)0 };
-        char *environment[] = { (char *)0 };
-        execve(POWEROFF_LAUNCHPAD_PATH, arguments, environment);
-        _exit(1);
-    }
+    spawn(POWEROFF_LAUNCHPAD_PATH);
 }
 
 static void launch_reboot(void)
 {
 	printf(":: sm: launching reboot...");
     if (!file_exists(REBOOT_LAUNCHPAD_PATH)) return;
-    pid_t process_id = fork();
-    if (process_id == 0)
-    {
-        char *arguments[] = { REBOOT_LAUNCHPAD_PATH, (char *)0 };
-        char *environment[] = { (char *)0 };
-        execve(REBOOT_LAUNCHPAD_PATH, arguments, environment);
-        _exit(1);
-    }
+    spawn(REBOOT_LAUNCHPAD_PATH);
 }
 
 static void draw_label(

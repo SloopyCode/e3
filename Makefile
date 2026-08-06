@@ -19,7 +19,7 @@ UI16 := ui16/
 
 CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector     \
           -fno-PIE -fno-pic -m64 -march=x86-64 -mno-sse -mno-sse2        \
-          -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11 -D__sulfur__ -g\
+          -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11 -D__sulfur__ -O2\
           -I$(LIBC)/include                                              \
           -I$(LIBDESKTOP)
 
@@ -49,9 +49,9 @@ all: clean $(LIBC)/build/crt0.o dirs build/s4.elf run
 fetchDeps:
 	mkdir -p include
 	if [ ! -d "$(LIBC_DIR)" ]; then \
-		git clone --depth=1 https://github.com/doccrLabs/doccrOS.git include/doccrOS; \
-		mv include/doccrOS/user/libc $(LIBC_DIR); \
-		rm -rf include/doccrOS; \
+		git clone --depth=1 https://github.com/sulfurLabs/sulfurOS.git include/sulfurOS; \
+		mv include/sulfurOS/user/libc $(LIBC_DIR); \
+		rm -rf include/sulfurOS; \
 	fi
 
 dirs:
@@ -87,6 +87,10 @@ build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTO
 	@echo "building ui16 now..."
 	@$(MAKE) -C ui16
 	@echo "ui16 was succesfully built!"
+
+	@echo "building s4 resources now..."
+	@chmod +x tools/buildimage.sh
+	@./tools/buildimage.sh
 
 	@rm -f  $(ROOTFS_PATH)/s4.elf
 	@mkdir -p $(OS_LIBS)$(UI16)

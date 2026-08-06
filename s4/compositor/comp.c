@@ -194,13 +194,23 @@ void comp_put_row(
       	y >= g_h
     ) return;
 
-    unsigned int *dst = g_buf + (unsigned)y * g_stride;
+    if (!row || len <= 0) return;
 
-    for (int i = 0; i < len; i++)
+    int src_offset = 0;
+    if (x < 0)
     {
-        int px = x + i;
-        if (px >= 0 && px < g_w) dst[px] = row[i];
+        src_offset = -x;
+        len += x;
+        x = 0;
     }
+    if (x >= g_w || len <= 0) return;
+    if (len > g_w - x) len = g_w - x;
+
+    memcpy(
+    	g_buf + (unsigned)y * g_stride + (unsigned)x,
+     	row + src_offset,
+      	(size_t)len * sizeof(*row)
+    );
 }
 
 void
@@ -257,17 +267,33 @@ void comp_put_pixels(
 ) {
 	check_g_buf(__func__);
     if (!g_buf || !pixels) return;
+    if (w <= 0 || h <= 0) return;
+
+    int src_stride = w;
+    int src_x = 0;
+    int src_y = 0;
+    if (x < 0)
+    {
+        src_x = -x;
+        w += x;
+        x = 0;
+    }
+    if (y < 0)
+    {
+        src_y = -y;
+        h += y;
+        y = 0;
+    }
+    if (x >= g_w || y >= g_h || w <= 0 || h <= 0) return;
+    if (w > g_w - x) w = g_w - x;
+    if (h > g_h - y) h = g_h - y;
+
     for (int row = 0; row < h; row++)
     {
-        int py = y + row;
-        if (py < 0 || py >= g_h) continue;
-        unsigned int *dst = g_buf + (unsigned)py * g_stride;
+        unsigned int *dst = g_buf + (unsigned)(y + row) * g_stride + (unsigned)x;
+        const unsigned int *src = pixels + (size_t)(src_y + row) * src_stride + src_x;
 
-        for (int col = 0; col < w; col++)
-        {
-            int px = x + col;
-            if (px >= 0 && px < g_w) dst[px] = pixels[row * w + col];
-        }
+        memcpy(dst, src, (size_t)w * sizeof(*pixels));
     }
 }
 

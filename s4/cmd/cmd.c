@@ -163,10 +163,12 @@ void cmd_process(cmd_result_t *result)
     result->win_changed = 0;
 
     int fd = open(DT_CMD, O_RDONLY);
-    int n = (int)read(fd, buf, sizeof(buf) - 1);
     if (fd < 0) return; /* if file exists */
 
-    close(fd); if (n <= 0) return;
+    int n = (int)read(fd, buf, sizeof(buf) - 1);
+
+    close(fd);
+    if (n <= 0) return;
     buf[n] = '\0';
     if (buf[0] == '\0') return;
 
@@ -185,9 +187,9 @@ int cmd_check_dirty(void)
 {
     char buf[4];
     int fd = open(DT_DIRTY, O_RDONLY);
-    int n = (int)read(fd, buf, 1);
-
     if (fd < 0) return 0;
+
+    int n = (int)read(fd, buf, 1);
     close(fd);
     if (n <= 0 || buf[0] != '1') return 0;
 

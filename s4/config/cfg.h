@@ -62,10 +62,10 @@
 #define BAND_FILL   0x33A8A5A5u   // the content
 
 //taskbar
-#define TB_H 38
+#define TB_H 40
 #define TB_BTN_PAD 3
 #define TB_BTN_VPAD 6
-#define TB_BTN_W 120
+#define TB_BTN_W 25
 #define TB_BORDER_W 3
 #define TB_ENTRY_NAMELEN 32
 #define TB_ENTRY_EXECLEN 64
@@ -160,4 +160,4 @@
 
 // scaling settings
 #define RENDERER_SCALING_ENABLED 0
-#define RENDERER_SUPERSAMPLING_FACTOR 0
+#define RENDERER_SUPERSAMPLING_FACTOR 2

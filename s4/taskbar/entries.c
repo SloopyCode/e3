@@ -25,9 +25,9 @@ static tb_widget_t s_entries[] =
         .name          = "login",
         .text          = "login",
         .exec          = SYSTEM "login.elf",
-        .icon_path     = NULL,
+        .icon_path     = SYSTEM "icons/exec.bmp",
         .icon          = { .loaded = 0 },
-        .disp          = TB_DISP_ICON_TEXT,
+        .disp          = TB_DISP_ICON_ONLY,
         .popup_pid     = -1,
         .popup_w       = 0,
         .popup_h       = 0,
@@ -40,7 +40,7 @@ static tb_widget_t s_entries[] =
         .exec          = "/bin/doomgeneric.elf",
         .icon_path     = SYSTEM "icons/doom.tga",
         .icon          = { .loaded = 0 },
-        .disp          = TB_DISP_ICON_TEXT,
+        .disp          = TB_DISP_ICON_ONLY,
         .popup_pid     = -1,
         .popup_w       = 0,
         .popup_h       = 0,
@@ -51,9 +51,9 @@ static tb_widget_t s_entries[] =
         .name          = "template",
         .text          = "ui16",
         .exec          = "/bin/template.elf",
-        .icon_path     = NULL,
+        .icon_path     = SYSTEM "icons/template.bmp",
         .icon          = { .loaded = 0 },
-        .disp          = TB_DISP_ICON_TEXT,
+        .disp          = TB_DISP_ICON_ONLY,
         .popup_pid     = -1,
         .popup_w       = 0,
         .popup_h       = 0,
@@ -64,9 +64,9 @@ static tb_widget_t s_entries[] =
         .name          = "welcome",
         .text          = "welcome",
         .exec          = "/system/desktop/welcome.elf",
-        .icon_path     = NULL,
+        .icon_path     = SYSTEM "icons/welcome.bmp",
         .icon          = { .loaded = 0 },
-        .disp          = TB_DISP_ICON_TEXT,
+        .disp          = TB_DISP_ICON_ONLY,
         .popup_pid     = -1,
         .popup_w       = 0,
         .popup_h       = 0,
@@ -154,7 +154,7 @@ void entries_load_icon(tb_widget_t *entry)
         return;
     }
 
-    printf(":: icon: tga: '%s' not working. bmp fallback\n", entry->name, path);
+    printf(":: icon: tga: '%s' not working (path: %s). bmp fallback\n", entry->name, path);
 
     {
         static char bmp_fallback[256];
@@ -172,7 +172,7 @@ void entries_load_icon(tb_widget_t *entry)
             if (bmp_load(bmp_fallback, &entry->icon.image) == 0)
             {
                 entry->icon.loaded = 1;
-                printf("[ICON] bmp-fallback '%s', no alpha channel now\n", entry->name, bmp_fallback);
+                printf(":: icon: bmpfallback: '%s' (%s), no alpha channel now\n", entry->name, bmp_fallback);
                 return;
             }
         }
@@ -192,7 +192,7 @@ void entries_load_icon(tb_widget_t *entry)
         return;
     }
 
-    printf(":: icon: all failed, no icon for today :D\n", entry->name);
+    printf(":: icon: '%s': all failed, no icon for today :D\n", entry->name);
 }
 
 tb_widget_t *entries_get(int *out_count)
