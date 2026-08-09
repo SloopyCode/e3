@@ -15,7 +15,7 @@
 #include "../compositor/comp.h"
 #include "../config/cfg.h"
 #include "../fonts/fonts.h"
-#include "../desktop_input_dispatch.h"
+#include "../ipc/ipc.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -43,32 +43,6 @@ static int _slen(const char *s)
 	while (s[n]) n++;
 
 	return n;
-}
-static void _itoa(int v, char *out)
-{
-    char tmp[16];
-    int i = 0;
-    int j = 0;
-    int neg = (v < 0);
-
-    if (v == 0)
-    {
-    	out[0] = '0';
-    	out[1] = '\0';
-    	return;
-    }
-    if (neg) v =- v;
-
-    while (v)
-    {
-    	tmp[i++] = '0' + v % 10;
-    	v /= 10;
-    }
-    if (neg) tmp[i++] = '-';
-
-    while (i > 0) out[j++] = tmp[--i];
-
-    out[j] = '\0';
 }
 
 static int _atoi(const char *s)
@@ -121,7 +95,6 @@ static int btn_x(int i)
          + TB_START_W
          + TB_STARTBUTTON_PAD_RIGHT
          + TB_BTN_PAD
-         + 2 /*extra space */
          + i * (TB_BTN_W + TB_BTN_PAD);
 }
 
@@ -174,45 +147,7 @@ static void open_popup_window(int widget_idx, pid_t pid, int pw, int ph)
     int py;
     popup_pos(widget_idx, pw, ph, &px, &py);
 
-    char buf[256];
-    char tmp[16];
-    char existing[4096];
-    int elen = 0;
-    int p = 0;
-
-    buf[p++] = 'O'; buf[p++] = ' ';
-
-    _itoa((int)pid, tmp);
-
-    for (int k = 0; tmp[k]; k++) buf[p++] = tmp[k];
-
-    buf[p++] = ' ';
-    buf[p++] = '1'; buf[p++] = ' ';
-
-    _itoa(px, tmp); for (int k=0;tmp[k];k++) buf[p++]=tmp[k]; buf[p++]=' ';
-    _itoa(py, tmp); for (int k=0;tmp[k];k++) buf[p++]=tmp[k]; buf[p++]=' ';
-    _itoa(pw, tmp); for (int k=0;tmp[k];k++) buf[p++]=tmp[k]; buf[p++]=' ';
-    _itoa(ph, tmp); for (int k=0;tmp[k];k++) buf[p++]=tmp[k]; buf[p++]=' ';
-
-    // a popup doesnt have a title
-    // if a program wants a title it needs to add it itself
-    buf[p++] = '\n'; buf[p] = '\0';
-
-    int fd = open(DT_CMD, O_RDONLY);
-    if (fd >= 0)
-    {
-        int r = (int)read(fd, existing, sizeof(existing) - 1);
-        close(fd);
-        if (r > 0) { existing[r] = '\0'; elen = r; }
-    }
-
-    fd = open(DT_CMD, O_WRONLY | O_CREAT);
-    if (fd < 0) return;
-    if (elen > 0) write(fd, existing, (unsigned)elen);
-
-    write(fd, buf, (unsigned)_slen(buf));
-
-    close(fd);
+    ipc_request_open_window(pid, DT_POPUP, px, py, pw, ph, "");
 }
 
 static void draw_widget_content(
@@ -345,8 +280,8 @@ int taskbar_add_widget(const tb_widget_t *w)
 static void draw_start_button(int y, int mx, int my, int btn_down)
 {
     int bx    = start_btn_x();
-    int by    = y + TB_BTN_VPAD + 1;
-    int bh    = 22;
+    int by    = y + TB_BTN_VPAD + 3;
+    int bh    = TB_START_H;
     int hov   = hit_start_btn(mx, my);
     /* also show as pressed when menu is open */
     int press = (hov && btn_down) || startmenu_is_open();
@@ -355,7 +290,7 @@ static void draw_start_button(int y, int mx, int my, int btn_down)
 
     if (hov || press)
     {
-        unsigned int col = press ? TB_BTN_TOP : TB_LIGHT;
+        //unsigned int col = press ? TB_BTN_TOP : TB_LIGHT;
         /*
         comp_fill(bx, by,                            TB_START_W,  TB_BORDER_W, col);
         comp_fill(bx, by + bh - TB_BORDER_W,         TB_START_W,  TB_BORDER_W, col);

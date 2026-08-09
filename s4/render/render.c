@@ -9,7 +9,7 @@
  */
 
 #include "render.h"
-#include "../compositor/comp.h"
+#include "render_target.h"
 #include "../config/cfg.h"
 #include "../win/win.h"
 #include "../../../libs/libfont/libfont.h"
@@ -23,13 +23,13 @@ static int slen(const char *s) { int n = 0; while (s[n]) n++; return n; }
 
 static unsigned int stripe(int y, int focused)
 {
-	#if DARK_MODE == 1
-	    return focused ? DT_TITLE_ACT : DT_TITLE_INA;
-	#else
-	    if (focused) return (y & 1) ? WIN_BLACK : WIN_WHITE;
+    #if DARK_MODE == 1
+        return focused ? DT_TITLE_ACT : DT_TITLE_INA;
+    #else
+        if (focused) return (y & 1) ? WIN_BLACK : WIN_WHITE;
 
-	    return (y & 1) ? WIN_UNFOCUSED_BG : WIN_FOCUSED_BG;
-	#endif
+        return (y & 1) ? WIN_UNFOCUSED_BG : WIN_FOCUSED_BG;
+    #endif
 }
 
 static void buf_char(int bx, char c, unsigned int fg, unsigned int bg, int frow)
@@ -58,21 +58,21 @@ static void buf_str_clamped(
 }
 
 static void flush_row(int x, int y, int w) {
-    comp_put_row(x, y, row_buf, w);
+    rt_put_row(x, y, row_buf, w);
 }
 
 static void hline_comp(int x, int y, int w, unsigned int c)
 {
     for (int dx = 0; dx < w && dx < ROW_MAX; dx++) row_buf[dx] = c;
-    comp_put_row(x, y, row_buf, w);
+    rt_put_row(x, y, row_buf, w);
 }
 // to the backbuffer
 static void side_borders_comp(int wx, int y, int ww)
 {
-    comp_set(wx,          y, WIN_BLACK);
-    comp_set(wx + 1,      y, WIN_BLACK);
-    comp_set(wx + ww - 2, y, WIN_BLACK);
-    comp_set(wx + ww - 1, y, WIN_BLACK);
+    rt_set(wx,          y, WIN_BLACK);
+    rt_set(wx + 1,      y, WIN_BLACK);
+    rt_set(wx + ww - 2, y, WIN_BLACK);
+    rt_set(wx + ww - 1, y, WIN_BLACK);
 }
 
 static void blit_win_buf_scaled(
@@ -104,7 +104,7 @@ static void blit_win_buf_scaled(
             if (sx >= sw) sx = sw - 1;
             row_buf[dx] = srow[sx];
         }
-        comp_put_pixels(cx, cy + dy, len, 1, row_buf);
+        rt_put_pixels(cx, cy + dy, len, 1, row_buf);
     }
 }
 
@@ -144,7 +144,17 @@ static void blit_win_buf(
         ch = w->h - DT_BORDER * 2;
     }
 
-    if (w->buf_w == cw && w->buf_h == ch) comp_put_pixels(cx, cy, w->buf_w, w->buf_h, w->buf);
+    if (
+        w->buf_w == cw &&
+        w->buf_h == ch
+    ) rt_put_pixels(
+        cx,
+        cy,
+        w->buf_w,
+        w->buf_h,
+        w->buf
+    );
+
     else blit_win_buf_scaled(cx, cy, cw, ch, w->buf, w->buf_w, w->buf_h);
 }
 
@@ -158,8 +168,8 @@ void render_win(dt_win_t *w, int mx, int my)
 
     unsigned int style = w->style;
 
-    int h = comp_h();
-    int cw = comp_w();
+    int h = rt_height();
+    int cw = rt_width();
     (void)cw;
 
     int has_title = !(style & DT_NOTITLE);
@@ -191,22 +201,19 @@ void render_win(dt_win_t *w, int mx, int my)
         for (int dy = 1; dy < wh - 1; dy++) {
             int ay = wy + dy;
             if (ay < 0 || ay >= h) continue;
-            comp_set(wx,          ay, WIN_BLACK);
-            comp_set(wx + ww - 1, ay, WIN_BLACK);
+            rt_set(wx,          ay, WIN_BLACK);
+            rt_set(wx + ww - 1, ay, WIN_BLACK);
         }
         return;
     }
 
     //int has_title = !(style & DT_NOTITLE);
     int tw = slen(w->title) * DT_FW;
+    int tx = (ww - tw) / 2;
 
-    // clamp title width so it fits inside the window, leaving room for the
-    // close, maximize (unless tiling) and minimize buttons
     int deco_end = DT_MIN_X + DT_MIN_SZ;
     int title_area = ww - deco_end - 4 - 4;
     if (tw > title_area) tw = title_area;
-
-    int tx = (ww - tw) / 2;
     if (tx < deco_end + 2) tx = deco_end + 2;
 
     int sl = tx - 4;

@@ -17,12 +17,12 @@ CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector  \
           -I$(LIBC)/include                                           \
           -I.
 
-SRCS := libdesktop.c
+SRCS := libdesktop.c dt_ipc.c
 OBJS := $(SRCS:%.c=build/%.o)
 
 all: build/libdesktop.a
 
-build/%.o: %.c libdesktop.h | build
+build/%.o: %.c libdesktop.h dt_ipc.h | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
 build/libdesktop.a: $(OBJS) | build

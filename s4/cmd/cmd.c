@@ -12,8 +12,7 @@
 #include "../config/cfg.h"
 #include "../win/win.h"
 #include "../shm/shm_host.h"
-
-#include "../desktop_input_dispatch.h"
+#include "../ipc/ipc.h"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -61,18 +60,6 @@ static void push_rect(cmd_result_t *r, dt_win_t *wn)
     d->wh  = wn->h;
 }
 
-static void clear_file(const char *path, int n)
-{
-    if (n <= 0) return;
-    int fd = open(path, O_WRONLY | O_CREAT);
-    if (fd < 0) return;
-    static char clr[4096];
-    int cnt = n < 4096 ? n : 4096;
-    for (int i = 0; i < cnt; i++) clr[i] = '\n';
-    write(fd, clr, (unsigned)cnt);
-    close(fd);
-}
-
 static void process_line(const char *line, cmd_result_t *result)
 {
     if (!line[0] || line[0] == '\n') return;
@@ -109,7 +96,7 @@ static void process_line(const char *line, cmd_result_t *result)
         result->win_changed = 1;
         {
             dt_win_t *wn = win_get(idx);
-            if (wn) dt_write_window_size(pid, wn->home_cw, wn->home_ch);
+            if (wn) ipc_publish_window_size(pid, wn->home_cw, wn->home_ch);
         }
     } else if (cmd == 'C')
     {
@@ -162,21 +149,22 @@ void cmd_process(cmd_result_t *result)
     result->count = 0;
     result->win_changed = 0;
 
-    int fd = open(DT_CMD, O_RDONLY);
-    if (fd < 0) return; /* if file exists */
-
-    int n = (int)read(fd, buf, sizeof(buf) - 1);
-
-    close(fd);
+    int n = ipc_read_cmd_batch(buf, sizeof(buf) - 1);
     if (n <= 0) return;
     buf[n] = '\0';
     if (buf[0] == '\0') return;
 
-    clear_file(DT_CMD, n);
+    {
+        char clr[4096];
+        int cnt = n < 4096 ? n : 4096;
+        for (int i = 0; i < cnt; i++) clr[i] = '\n';
+        dt_ipc_write(DT_CHAN_CMD, 0, clr, (unsigned)cnt);
+    }
 
     /* process*/
     const char *line = buf;
-    while (*line) {
+    while (*line)
+    {
         process_line(line, result);
         while (*line && *line != '\n') line++;
         if (*line == '\n') line++;

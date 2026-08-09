@@ -11,7 +11,7 @@
 #include "input.h"
 #include "../win/win.h"
 #include "../cursor/cursor.h"
-#include "../desktop_input_dispatch.h"
+#include "../ipc/ipc.h"
 #include "../taskbar/taskbar.h"
 #include "../taskbar/startmenu.h"
 #include "../config/cfg.h"
@@ -61,8 +61,8 @@ void input_set_screen_size(int w, int h)
 }
 
 // minimum window size
-#define WIN_MIN_W 80
-#define WIN_MIN_H 40
+//#define WIN_MIN_W 80
+//#define WIN_MIN_H 40
 
 int win_get_resize_edge(int idx, int mx, int my)
 {
@@ -222,7 +222,7 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
             dt_win_t *tw = win_get(top_idx);
             if (tw && tw->pid != g_focused_pid)
             {
-                dt_clear_input(g_focused_pid);
+                ipc_clear_input(g_focused_pid);
                 g_focused_pid = tw->pid;
                 g_focused_idx = top_idx;
                 focus_changed_this_event = 1;
@@ -266,21 +266,21 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
             } else if (edge != RESIZE_NONE && !(win_get(top_idx) && (win_get(top_idx)->style & DT_NOMOVE) && edge == RESIZE_NONE))
             {
             	#if DT_ENABLE_RESIZING
-	            	// start resize
-	                dt_win_t *wn = win_get(top_idx);
-	                if (wn) {
-	                    g_resize_idx  = top_idx;
-	                    g_resize_edge = edge;
-	                    g_resize_sx   = mx;
-	                    g_resize_sy   = my;
-	                    g_resize_wx   = wn->x;
-	                    g_resize_wy   = wn->y;
-	                    g_resize_ww   = wn->w;
-	                    g_resize_wh   = wn->h;
-	                    g_resize_last_cw = wn->home_cw;
-	                    g_resize_last_ch = wn->home_ch;
-	                    cur_set_type(edge_to_cursor(edge));
-	                }
+                	// start resize
+                    dt_win_t *wn = win_get(top_idx);
+                    if (wn) {
+                        g_resize_idx  = top_idx;
+                        g_resize_edge = edge;
+                        g_resize_sx   = mx;
+                        g_resize_sy   = my;
+                        g_resize_wx   = wn->x;
+                        g_resize_wy   = wn->y;
+                        g_resize_ww   = wn->w;
+                        g_resize_wh   = wn->h;
+                        g_resize_last_cw = wn->home_cw;
+                        g_resize_last_ch = wn->home_ch;
+                        cur_set_type(edge_to_cursor(edge));
+                    }
                 #endif
             } else if (win_hit_title(top_idx, mx, my))
             {
@@ -414,9 +414,9 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
                 g_resize_last_ch = wn->home_ch;
 
                 dt_event_t rev;
-                if (dt_make_resize_event(wn->home_cw, wn->home_ch, &rev)) dt_dispatch_event(wn->pid, &rev);
+                if (ipc_make_resize_event(wn->home_cw, wn->home_ch, &rev)) ipc_dispatch_event(wn->pid, &rev);
 
-                dt_write_window_size(wn->pid, wn->home_cw, wn->home_ch);
+                ipc_publish_window_size(wn->pid, wn->home_cw, wn->home_ch);
             }
 
             changed = 1;
@@ -443,8 +443,8 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
 
             dt_event_t mev;
             if (
-            	dt_make_mouse_event(g_focused_idx, mx, my, btns, &mev)
-            ) dt_dispatch_event(g_focused_pid, &mev);
+            	ipc_make_mouse_event(g_focused_idx, mx, my, btns, &mev)
+            ) ipc_dispatch_event(g_focused_pid, &mev);
         }
     }
 
@@ -469,11 +469,11 @@ int input_drain(int mfd, input_state_t *is)
         if (ev.type == INPUT_EV_REL)
         {
             #if RENDERER_SCALING_ENABLED
-	            if (ev.code == INPUT_REL_X) mx += ev.value * RENDERER_SUPERSAMPLING_FACTOR;
-	            if (ev.code == INPUT_REL_Y) my += ev.value * RENDERER_SUPERSAMPLING_FACTOR;
+                if (ev.code == INPUT_REL_X) mx += ev.value * RENDERER_SUPERSAMPLING_FACTOR;
+                if (ev.code == INPUT_REL_Y) my += ev.value * RENDERER_SUPERSAMPLING_FACTOR;
             #else
-	            if (ev.code == INPUT_REL_X) mx += ev.value;
-	            if (ev.code == INPUT_REL_Y) my += ev.value;
+                if (ev.code == INPUT_REL_X) mx += ev.value;
+                if (ev.code == INPUT_REL_Y) my += ev.value;
             #endif
         } else if (ev.type == INPUT_EV_KEY)
         {
@@ -523,12 +523,12 @@ int input_drain_keyboard(int kfd)
         if (!fw || fw->pid != g_focused_pid) continue;
 
         dt_event_t kev;
-        if (dt_make_key_event(
+        if (ipc_make_key_event(
             (unsigned int)ev.code,
             ev.modifiers,
             (unsigned char)(ev.value != 0),
             &kev
-        )) dt_dispatch_event(g_focused_pid, &kev);
+        )) ipc_dispatch_event(g_focused_pid, &kev);
     }
 
     return got;

@@ -61,20 +61,26 @@
 #define BAND_BORDER 0xCCA8A5A5u   // border
 #define BAND_FILL   0x33A8A5A5u   // the content
 
+// minimum window size
+#define WIN_MIN_W 80
+#define WIN_MIN_H 40
+
 //taskbar
 #define TB_H 40
 #define TB_BTN_PAD 3
 #define TB_BTN_VPAD 6
-#define TB_BTN_W 25
+#define TB_BTN_W 26
+#define TB_BTN_H 26
 #define TB_BORDER_W 3
 #define TB_ENTRY_NAMELEN 32
 #define TB_ENTRY_EXECLEN 64
 #define TB_MAX_ENTRIES 10
 #define TB_START_W 22
+#define TB_START_H 22
 #define TB_STARTBUTTON_PAD_LEFT 5
-#define TB_STARTBUTTON_PAD_RIGHT 5
+#define TB_STARTBUTTON_PAD_RIGHT 7
 
-#define MAX_APPICON_SIZE 22
+#define MAX_APPICON_SIZE 21
 
 #define POWEROFF_LAUNCHPAD_PATH "/bin/poweroff.elf"
 #define REBOOT_LAUNCHPAD_PATH "/bin/reboot.elf"

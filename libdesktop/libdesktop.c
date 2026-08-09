@@ -8,6 +8,7 @@
  */
 
 #include "libdesktop.h"
+#include "dt_ipc.h"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -16,103 +17,6 @@
 #include <sys/shm.h>
 
 #define DT_ABI_VERSION 3
-
-#define DT_CMD         "/tmp/dt/cmd"
-#define DT_DIRTY_PFX   "/tmp/dt/dirty_"
-#define DT_WSIZE_PFX   "/tmp/dt/wsize_"
-#define DT_CURSOR      "/tmp/dt/cursor"
-//#define DT_WBUF_PFX    "/tmp/dt/wbuf_"
-#define DT_INPUT_PFX   "/tmp/dt/input_"
-
-#define DT_QUEUE_BYTES (sizeof(int) + sizeof(dt_event_t) * DT_EVENT_QUEUE_MAX)
-
-static void _itoa(int v, char *out)
-{
-    char tmp[16];
-    int i = 0;
-    int j = 0;
-    int neg = (v < 0);
-
-    if (v == 0)
-    {
-    	out[0] = '0';
-     	out[1] = '\0';
-      	return;
-    }
-    if (neg) v =- v;
-
-    while (v)
-    {
-    	tmp[i++] = '0' + v % 10;
-     	v /= 10;
-    }
-    if (neg) tmp[i++] = '-';
-
-    while (i > 0) out[j++] = tmp[--i];
-
-    out[j]='\0';
-}
-
-static int _slen(const char *s)
-{
-	int n = 0;
-	while(s[n]) n++;
-	return n;
-}
-
-static void _pid_path(const char *pfx, char *out)
-{
-    int i = 0;
-    int j = 0;
-    char ps[12];
-
-    while (*pfx) out[i++] = *pfx++;
-
-    _itoa((int) getpid(), ps);
-
-    while (ps[j]) out[i++] = ps[j++];
-
-    out[i] = '\0';
-}
-
-static void _app_int(char *buf, int *pos, int v)
-{
-    char tmp[12];
-    int i = 0;
-    _itoa(v, tmp);
-    while (tmp[i]) buf[(*pos )++] = tmp[i++];
-}
-
-static void _app_str(char *buf, int *pos, const char *s)
-{
-    while (*s) buf[(*pos)++] = *s++;
-}
-
-// handles structural commands (OCTM)
-static void _cmd_append(const char *line)
-{
-    static char existing[4096];
-
-    int fd = open(DT_CMD, O_RDONLY);
-    int elen = 0;
-    if (fd >= 0)
-    {
-        int r = (int) read(fd, existing, sizeof(existing)-1);
-        close(fd);
-        if (r > 0)
-        {
-        	existing[r] = '\0';
-         	elen = r;
-        }
-    }
-
-    fd = open(DT_CMD, O_WRONLY | O_CREAT);
-    if (fd < 0) return;
-    if (elen > 0) write(fd, existing, (unsigned)elen);
-
-    write(fd, line, (unsigned)_slen(line));
-    close(fd);
-}
 
 static int _createWindow(
 	const char *title,
@@ -123,34 +27,8 @@ static int _createWindow(
 	unsigned int style
 ) {
     char buf[256];
-    int p = 0;
-    buf[p++] = 'O';
-    buf[p++] = ' ';
-
-    _app_int(buf, &p, (int)getpid());
-    buf[p++] = ' ';
-
-    _app_int(buf, &p, (int)style);
-    buf[p++] = ' ';
-
-    _app_int(buf, &p, x);
-    buf[p++] = ' ';
-
-    _app_int(buf, &p, y);
-    buf[p++] = ' ';
-
-    _app_int(buf, &p, w);
-    buf[p++] = ' ';
-
-    _app_int(buf, &p, h);
-    buf[p++] = ' ';
-
-    _app_str(buf, &p, title);
-    buf[p++] = '\n';
-
-    buf[p] = '\0';
-    _cmd_append(buf);
-
+    dt_ipc_build_open_cmd(buf, sizeof(buf), getpid(), style, x, y, w, h, title);
+    dt_ipc_cmd_append(buf);
     return 0;
 }
 
@@ -169,34 +47,42 @@ static int _createPopup(int x, int y, int w, int h)
 static void _closeWindow(void)
 {
     char buf[32];
+    char num[12];
     int p = 0;
+    int k;
 
     buf[p++] = 'C';
     buf[p++] = ' ';
 
-    _app_int(buf, &p, (int)getpid());
+    dt_ipc_itoa((int)getpid(), num);
+    for (k = 0; num[k]; k++) buf[p++] = num[k];
+
     buf[p++] = '\n';
     buf[p] = '\0';
 
-    _cmd_append(buf);
+    dt_ipc_cmd_append(buf);
 }
 
 static void _setTitle(const char *title)
 {
     char buf[256];
+    char num[12];
     int p = 0;
+    int k;
 
     buf[p++] = 'T';
     buf[p++] = ' ';
 
-    _app_int(buf, &p, (int)getpid());
+    dt_ipc_itoa((int)getpid(), num);
+    for (k = 0; num[k]; k++) buf[p++] = num[k];
     buf[p++] = ' ';
 
-    _app_str(buf, &p, title);
+    while (*title) buf[p++] = *title++;
     buf[p++] = '\n';
 
     buf[p] = '\0';
-    _cmd_append(buf);
+
+    dt_ipc_cmd_append(buf);
 }
 
 static uint64_t s_shm_id  = 0;
@@ -215,25 +101,28 @@ static int ensure_shm_fd(void)
 static void send_shm_cmd(uint64_t shm_id, int w, int h)
 {
     char buf[128];
+    char num[12];
     int p = 0;
+    int k;
 
-    buf[p++] = 'S'; buf[p++] = ' ';
-
-    _app_int(buf, &p, (int)getpid());
+    buf[p++] = 'S';
     buf[p++] = ' ';
 
-    _app_int(buf, &p, (int)shm_id);
-    buf[p++] = ' ';
+    dt_ipc_itoa((int)getpid(), num);
+    for (k = 0; num[k]; k++) buf[p++] = num[k]; buf[p++] = ' ';
 
-    _app_int(buf, &p, w);
-    buf[p++] = ' ';
+    dt_ipc_itoa((int)shm_id, num);
+    for (k = 0; num[k]; k++) buf[p++] = num[k]; buf[p++] = ' ';
 
-    _app_int(buf, &p, h);
-    buf[p++] = '\n';
+    dt_ipc_itoa(w, num);
+    for (k = 0; num[k]; k++) buf[p++] = num[k]; buf[p++] = ' ';
+
+    dt_ipc_itoa(h, num);
+    for (k = 0; num[k]; k++) buf[p++] = num[k]; buf[p++] = '\n';
 
     buf[p] = '\0';
 
-    _cmd_append(buf);
+    dt_ipc_cmd_append(buf);
 }
 
 static unsigned int *_allocFramebuffer(int w, int h)
@@ -287,32 +176,17 @@ static void _presentFrame(void)
 {
     if (!s_shm_id) return;
 
-    char path[64];
-    _pid_path("/tmp/dt/dirty_", path);
-
-    int fd = open(path, O_WRONLY | O_CREAT);
-    if (fd >= 0)
-    {
-    	write(fd, "1", 1);
-     	close(fd);
-    }
+    char one = '1';
+    dt_ipc_write(DT_CHAN_DIRTY, getpid(), &one, 1);
 }
 
 static int _pollEvents(dt_event_t *buf, int max)
 {
     if (!buf || max <= 0) return 0;
 
-    char path[64];
-    unsigned char raw[DT_QUEUE_BYTES];
+    unsigned char raw[sizeof(int) + sizeof(dt_event_t) * DT_EVENT_QUEUE_MAX];
 
-    _pid_path(DT_INPUT_PFX, path);
-
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) return 0;
-
-    int bytes = (int)read(fd, raw, sizeof(raw));
-    close(fd);
-
+    int bytes = dt_ipc_read(DT_CHAN_INPUT, getpid(), raw, sizeof(raw));
     if (bytes < (int)sizeof(int)) return 0;
 
     int count;
@@ -331,12 +205,15 @@ static int _pollEvents(dt_event_t *buf, int max)
     int remaining = count - amount;
     if (remaining > 0) memmove(evs, evs + amount, (size_t)remaining * sizeof(dt_event_t));
 
-    fd = open(path, O_WRONLY | O_CREAT);
-    if (fd >= 0)
     {
-        write(fd, &remaining, sizeof(remaining));
-        if (remaining > 0) write(fd, evs, (size_t)remaining * sizeof(dt_event_t));
-        close(fd);
+        unsigned char out[sizeof(int) + sizeof(dt_event_t) * DT_EVENT_QUEUE_MAX];
+        memcpy(out, &remaining, sizeof(remaining));
+        if (remaining > 0) memcpy(out + sizeof(int), evs, (size_t)remaining * sizeof(dt_event_t));
+
+        dt_ipc_write(
+        	DT_CHAN_INPUT, getpid(), out,
+         	(unsigned)(sizeof(int) + (unsigned)remaining * sizeof(dt_event_t))
+        );
     }
 
     return amount;
@@ -349,13 +226,7 @@ static void _getCurrentMousePos(int *out_x, int *out_y)
     *out_x = 0;
     *out_y = 0;
     char buf[32];
-
-    int fd = open(DT_CURSOR, O_RDONLY);
-    if (fd < 0) return;
-
-    int n = (int)read(fd, buf, sizeof(buf) -1);
-    close(fd);
-
+    int n = dt_ipc_read(DT_CHAN_CURSOR, 0, buf, sizeof(buf) - 1);
     if (n <= 0) return;
     buf[n] = '\0';
 
@@ -379,16 +250,7 @@ static void _getWindowSize(int *out_w, int *out_h)
 
     char path[64];
     char buf[32];
-    int n;
-    int fd;
-
-    _pid_path(DT_WSIZE_PFX, path);
-
-    fd = open(path, O_RDONLY);
-    if (fd < 0) return;
-    n = (int)read(fd, buf, sizeof(buf) - 1);
-    close(fd);
-
+    int n = dt_ipc_read(DT_CHAN_WSIZE, getpid(), buf, sizeof(buf) - 1);
     if (n <= 0) return;
     buf[n] = '\0';
 

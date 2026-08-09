@@ -28,8 +28,14 @@ LDFLAGS := -nostdlib -static -no-pie -T user.ld
 LIBC_DIR := include/libc
 
 OBJS := build/desktop.o \
-		build/desktop_input_dispatch.o \
+        build/dt_ipc.o \
+        build/ipc/ipc.o \
+        build/wm/wm.o \
         build/compositor/comp.o \
+        build/compositor/fb_backend.o \
+        build/compositor/surface.o \
+        build/compositor/scale.o \
+        build/render/render_target.o \
         build/cmd/cmd.o \
         build/bg/bmp/bmp.o \
         build/bg/tga/tga.o \
@@ -59,6 +65,8 @@ dirs:
 	mkdir -p ui16/build
 
 	mkdir -p build
+	mkdir -p build/ipc
+	mkdir -p build/wm
 	mkdir -p build/compositor
 	mkdir -p build/bg
 	mkdir -p build/bg/bmp
@@ -98,18 +106,25 @@ build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTO
 	@cp build/s4.elf $(ROOTFS_PATH)desktop.elf
 	@cp libdesktop/build/libdesktop.a $(OS_LIBS)$(LIBDESKTOP)libdesktop.a
 	@cp libdesktop/libdesktop.h $(OS_LIBS)$(LIBDESKTOP)libdesktop.h
+	@cp libdesktop/dt_ipc.h $(OS_LIBS)$(LIBDESKTOP)dt_ipc.h
 	@cp ui16/build/ui16.a $(OS_LIBS)$(UI16)ui16.a
 	@cp ui16/include/ui16.h $(OS_LIBS)$(UI16)ui16.h
 	@cp ui16/include/ui16buttons.h $(OS_LIBS)$(UI16)ui16buttons.h
 
 
 build/desktop.o:                    s4/desktop.c                   ; $(CC) $(CFLAGS) -c $< -o $@
+build/dt_ipc.o:                     libdesktop/dt_ipc.c            ; $(CC) $(CFLAGS) -c $< -o $@
+build/ipc/ipc.o:                    s4/ipc/ipc.c                   ; $(CC) $(CFLAGS) -c $< -o $@
+build/wm/wm.o:                      s4/wm/wm.c                     ; $(CC) $(CFLAGS) -c $< -o $@
 build/compositor/comp.o:            s4/compositor/comp.c           ; $(CC) $(CFLAGS) -c $< -o $@
+build/compositor/fb_backend.o:      s4/compositor/fb_backend.c     ; $(CC) $(CFLAGS) -c $< -o $@
+build/compositor/surface.o:         s4/compositor/surface.c        ; $(CC) $(CFLAGS) -c $< -o $@
+build/compositor/scale.o:           s4/compositor/scale.c          ; $(CC) $(CFLAGS) -c $< -o $@
+build/render/render_target.o:       s4/render/render_target.c      ; $(CC) $(CFLAGS) -c $< -o $@
 build/bg/bmp/bmp.o:                 s4/bg/bmp/bmp.c                ; $(CC) $(CFLAGS) -c $< -o $@
 build/bg/tga/tga.o:                 s4/bg/tga/tga.c                ; $(CC) $(CFLAGS) -c $< -o $@
 build/bg/bg.o:                      s4/bg/bg.c                     ; $(CC) $(CFLAGS) -c $< -o $@
 build/win/win.o:                    s4/win/win.c                   ; $(CC) $(CFLAGS) -c $< -o $@
-build/desktop_input_dispatch.o:     s4/desktop_input_dispatch.c    ; $(CC) $(CFLAGS) -c $< -o $@
 build/cursor/cursor.o:              s4/cursor/cursor.c             ; $(CC) $(CFLAGS) -c $< -o $@
 build/render/render.o:              s4/render/render.c             ; $(CC) $(CFLAGS) -c $< -o $@
 build/input/input.o:                s4/input/input.c               ; $(CC) $(CFLAGS) -c $< -o $@
@@ -130,7 +145,7 @@ $(UI16)/build/ui16.a:
 	$(MAKE) -C $(UI16)
 
 clean:
-	rm -f build/*.o build/compositor/*.o build/bg/*.o build/bg/bmp/*.o build/win/*.o build/cursor/*.o build/render/*.o build/input/*.o build/cmd/*.o build/fonts/* build/taskbar/*.o build/desktop.elf
+	rm -f build/*.o build/ipc/*.o build/wm/*.o build/compositor/*.o build/bg/*.o build/bg/bmp/*.o build/win/*.o build/cursor/*.o build/render/*.o build/input/*.o build/cmd/*.o build/fonts/* build/taskbar/*.o build/desktop.elf
 	@$(MAKE) -C ui16 clean
 	@$(MAKE) -C libdesktop clean
 
