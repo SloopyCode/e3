@@ -9,6 +9,7 @@
 
 #include "libdesktop.h"
 #include "dt_ipc.h"
+#include "../s4/os.h"
 
 #include <unistd.h>
 #include <fcntl.h>

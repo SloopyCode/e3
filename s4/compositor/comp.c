@@ -14,7 +14,7 @@
 #include "scale.h"
 #include <unistd.h>
 #include <stdio.h>
-#include "../config/cfg.h"
+#include "../cfg.h"
 
 static fb_backend_t g_fb;
 static surface_t    g_surface;
@@ -36,7 +36,7 @@ static void check_g_buf(const char *where)
 
 void comp_init(int fb_fd, int requested_internal_width, int requested_internal_height)
 {
-    printf(":: comp: starting...\n");
+    printf(":: init compositor\n");
 
     if (!fb_backend_init(&g_fb, fb_fd)) return;
 

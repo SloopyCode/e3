@@ -9,8 +9,9 @@
  */
 
 #include "win.h"
-#include "../config/cfg.h"
+#include "../cfg.h"
 #include "../shm/shm_host.h"
+#include "../ipc/ipc.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 static dt_win_t wins[DT_WIN_MAX];
 static int win_cnt = 0;
 static int z_next  = 0;
+static int tile_seq_next = 0;
 
 static void scopy(char *dst, const char *src, int max)
 {
@@ -69,6 +71,7 @@ int win_add(
             wins[i].w = w;
             wins[i].h = h;
 
+            wins[i].tile_seq = tile_seq_next++;
             wins[i].style = style;
             wins[i].valid = 1;
             wins[i].focused = 0;
@@ -303,3 +306,215 @@ int win_count(void)
 {
 	return win_cnt;
 }
+
+#if ENABLE_TILING
+    void win_tile_all(int scr_w, int scr_h, int taskbar_h)
+    {
+        dt_win_t *list[DT_WIN_MAX];
+        int n = 0;
+
+        for (int i = 0; i < DT_WIN_MAX; i++)
+        {
+            dt_win_t *w = &wins[i];
+            if (!w->valid) continue;
+            if (w->style & DT_POPUP) continue;
+            if (w->style & DT_NOTITLE) continue;
+
+            list[n++] = w;
+        }
+
+        if (n == 0) return;
+
+        for (int i = 1; i < n; i++)
+        {
+            dt_win_t *key = list[i];
+            int j = i - 1;
+            while (j >= 0 && list[j]->tile_seq > key->tile_seq)
+            {
+                list[j + 1] = list[j];
+                j--;
+            }
+        list[j + 1] = key;
+        }
+
+        int avail_h = scr_h - taskbar_h;
+        if (avail_h < 1) avail_h = 1;
+
+        if (n == 1)
+        {
+            dt_win_t *w = list[0];
+            w->x = 0;
+            w->y = 0;
+            w->w = scr_w;
+            w->h = avail_h;
+            w->maximized = 1;
+            compute_home(w);
+            return;
+        }
+
+        int col[DT_WIN_MAX];
+        int left_count = 0, right_count = 0;
+        int tie_toggle = 0;
+
+        for (int i = 0; i < n; i++)
+        {
+            int c;
+
+            if (left_count < right_count) c = 0;
+            else if (right_count < left_count) c = 1;
+            else
+            {
+                c = tie_toggle;
+                tie_toggle ^= 1;
+            }
+
+            if (c == 0) left_count++;
+            else right_count++;
+
+            col[i] = c;
+        }
+
+        int left_w  = scr_w / 2;
+        int right_w = scr_w - left_w;
+        int right_x = left_w;
+
+        int left_y = 0, right_y = 0;
+        int left_idx = 0, right_idx = 0;
+
+        for (int i = 0; i < n; i++)
+        {
+            dt_win_t *w = list[i];
+
+            if (col[i] == 0)
+            {
+                int h = (avail_h * (left_idx + 1)) / left_count - (avail_h * left_idx) / left_count;
+
+                w->x = 0;
+                w->y = left_y;
+                w->w = left_w;
+                w->h = h;
+
+                left_y += h;
+                left_idx++;
+            }
+            else
+            {
+                int h = (avail_h * (right_idx + 1)) / right_count - (avail_h * right_idx) / right_count;
+
+                w->x = right_x;
+                w->y = right_y;
+                w->w = right_w;
+                w->h = h;
+
+                right_y += h;
+                right_idx++;
+            }
+
+            w->maximized = 1;
+            compute_home(w);
+        }
+    }
+
+    void win_retile_and_notify(int scr_w, int scr_h, int taskbar_h)
+    {
+        int old_cw[DT_WIN_MAX];
+        int old_ch[DT_WIN_MAX];
+
+        for (int i = 0; i < DT_WIN_MAX; i++)
+        {
+            old_cw[i] = wins[i].valid ? wins[i].home_cw : -1;
+            old_ch[i] = wins[i].valid ? wins[i].home_ch : -1;
+        }
+
+        win_tile_all(scr_w, scr_h, taskbar_h);
+
+        for (int i = 0; i < DT_WIN_MAX; i++)
+        {
+            if (!wins[i].valid) continue;
+            if (wins[i].home_cw == old_cw[i] && wins[i].home_ch == old_ch[i]) continue;
+
+            dt_event_t rev;
+            if (ipc_make_resize_event(wins[i].home_cw, wins[i].home_ch, &rev)) ipc_dispatch_event(wins[i].pid, &rev);
+
+            ipc_publish_window_size(wins[i].pid, wins[i].home_cw, wins[i].home_ch);
+        }
+    }
+
+    static dt_win_t *tile_eligible_find_by_pid(pid_t pid)
+    {
+        for (int i = 0; i < DT_WIN_MAX; i++)
+        {
+            dt_win_t *w = &wins[i];
+            if (!w->valid) continue;
+            if (w->style & DT_POPUP) continue;
+            if (w->style & DT_NOTITLE) continue;
+            if (w->pid == pid) return w;
+        }
+        return NULL;
+    }
+
+    static dt_win_t *tile_find_neighbor(dt_win_t *from, int dx, int dy)
+    {
+        dt_win_t *best = NULL;
+        long best_score = 0x7FFFFFFFL;
+
+        int fcx = from->x + from->w / 2;
+        int fcy = from->y + from->h / 2;
+
+        for (int i = 0; i < DT_WIN_MAX; i++)
+        {
+            dt_win_t *w = &wins[i];
+            if (!w->valid || w == from) continue;
+            if (w->style & DT_POPUP) continue;
+            if (w->style & DT_NOTITLE) continue;
+
+            int strict_ok = 0;
+
+            if (dx < 0) strict_ok = (w->x + w->w) <= from->x;
+            else if (dx > 0) strict_ok = w->x >= (from->x + from->w);
+            else if (dy < 0) strict_ok = (w->y + w->h) <= from->y;
+            else if (dy > 0) strict_ok = w->y >= (from->y + from->h);
+
+            if (!strict_ok) continue;
+
+            int wcx = w->x + w->w / 2;
+            int wcy = w->y + w->h / 2;
+
+            int dist = (dx != 0)
+                ? ((dx < 0) ? (from->x - (w->x + w->w)) : (w->x - (from->x + from->w)))
+                : ((dy < 0) ? (from->y - (w->y + w->h)) : (w->y - (from->y + from->h)))
+            ;
+
+            int cross = (dx != 0)
+                ? ((wcy > fcy) ? (wcy - fcy) : (fcy - wcy))
+                : ((wcx > fcx) ? (wcx - fcx) : (fcx - wcx))
+            ;
+
+            long score = (long)dist * 1000L + cross;
+
+            if (score < best_score)
+            {
+                best_score = score;
+                best = w;
+            }
+        }
+
+        return best;
+    }
+
+    void win_tile_move(pid_t pid, int dx, int dy, int scr_w, int scr_h, int taskbar_h)
+    {
+        dt_win_t *from = tile_eligible_find_by_pid(pid);
+        dt_win_t *to = tile_find_neighbor(from, dx, dy);
+
+        if (!from) return;
+        if (!to) return;
+
+        int tmp = from->tile_seq;
+
+        from->tile_seq = to->tile_seq;
+        to->tile_seq = tmp;
+
+        win_retile_and_notify(scr_w, scr_h, taskbar_h);
+    }
+#endif

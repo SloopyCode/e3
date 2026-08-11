@@ -22,6 +22,7 @@ static unsigned int g_row_buf[BG_ROW_MAX];
 
 void bg_init(int w, int h)
 {
+	printf(":: init background renderer\n");
     (void)w;
     (void)h;
 

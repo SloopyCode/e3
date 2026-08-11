@@ -9,6 +9,7 @@
  */
 
 #include "shm_host.h"
+#include "../cfg.h"
 #include <sys/shm.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -18,10 +19,11 @@ static int s_fd = -1;
 
 void shm_host_init(void)
 {
+	printf(":: init shared memory hoster\n");
     s_fd = open(SHM_DEV, O_RDWR);
     if (s_fd < 0)
     {
-        printf("[SHM] warning: could not open " SHM_DEV "\n");
+        printf(":: shm: warning: could not open " SHM_DEV "\n");
     }
 }
 

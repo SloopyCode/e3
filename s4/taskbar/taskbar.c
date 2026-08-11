@@ -13,7 +13,7 @@
 #include "entries.h"
 #include "dt_taskbar.h"
 #include "../compositor/comp.h"
-#include "../config/cfg.h"
+#include "../cfg.h"
 #include "../fonts/fonts.h"
 #include "../ipc/ipc.h"
 

@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "config/cfg.h"
+#include "cfg.h"
 #include "compositor/comp.h"
 #include "render/render_target.h"
 #include "bg/bg.h"
@@ -85,18 +85,24 @@ static void render_band(input_state_t *is)
 
 int main(void)
 {
-    printf("\n:: starting e3...\n");
+    printf("\n:: starting s4 for " GREETING "...\n");
     printf(":: mkdir " DT_DIR "...\n");
     mkdir(DT_DIR, 0);
 
     ipc_init();
 
-    printf(":: reading framebuffer...\n");
+    printf(":: reading framebuffer... (" FRAMEBUFFER_DEV ")\n");
     int fb = open(FRAMEBUFFER_DEV, O_RDWR);
-    printf(":: reading mouse...\n");
+    printf(":: reading mouse... (" MOUSE_DEV ")\n");
     int mfd = open(MOUSE_DEV, O_RDONLY);
-    printf(":: reading keyboard...\n");
+    printf(":: reading keyboard... (" KEYBOARD_DEV ")\n");
     int kfd = open(KEYBOARD_DEV, O_RDONLY);
+
+    printf("TEST A\n");
+    printf("TEST %d\n", 123);
+    printf("TEST %u\n", 123u);
+    printf("TEST %x\n", 123);
+    printf("TEST %s\n", "hello");
 
     if (fb < 0 || mfd < 0) return 1;
 
@@ -122,12 +128,16 @@ int main(void)
         internal_h = scr_h + scr_h / 2;
     #endif
 
+    printf(":: internal size: %d x %d\n", internal_w, internal_h);
+
     shm_host_init();
 
     input_set_screen_size(internal_w, internal_h);
     cmd_set_screen_size(internal_w, internal_h);
     ipc_set_screen_size(internal_w, internal_h);
 
+    //shm_host_init();
+    //ipc_init();
     input_init();
     comp_init(fb, internal_w, internal_h);
     bg_init(internal_w, internal_h);
@@ -138,21 +148,27 @@ int main(void)
     comp_flush();
 
     printf(
-        "loading e3 was a success!\n"
-        "Welcome to e3!\n\n"
+        "loading s4 was a success!\n"
+        "Welcome to s4!\n\n"
     );
 
     input_state_t is;
+
     is.cx = internal_w / 2;
     is.cy = internal_h / 2;
-
 
     is.win_changed = 0;
     is.sel_active = 0;
     is._sel_was_active = 0;
-    is.sel_x0 = 0; is.sel_y0 = 0;
-    is.sel_x1 = 0; is.sel_y1 = 0;
-    is.sel_px1 = 0; is.sel_py1 = 0;
+
+    is.sel_x0 = 0;
+    is.sel_y0 = 0;
+
+    is.sel_x1 = 0;
+    is.sel_y1 = 0;
+
+    is.sel_px1 = 0;
+    is.sel_py1 = 0;
 
     cur_draw_fb(is.cx, is.cy);
     ipc_publish_cursor(is.cx, is.cy);
@@ -165,13 +181,13 @@ int main(void)
     for (;;)
     {
         int need_full = 0;
+        int need_cur  = 0;
+        cmd_result_t cr;
         if (first_frame)
         {
             need_full = 1;
             first_frame = 0;
         }
-        int need_cur  = 0;
-        cmd_result_t cr;
 
         cr.count = 0;
         cr.win_changed = 0;

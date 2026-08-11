@@ -9,10 +9,12 @@
  */
 
 #include "fb_backend.h"
+#include <stdio.h>
 #include <unistd.h>
 
 int fb_backend_init(fb_backend_t *fb, int fb_fd)
 {
+	printf(":: init framebuffer backend\n");
     fb_info_t info;
     unsigned long vaddr;
 

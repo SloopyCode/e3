@@ -9,14 +9,18 @@
  */
 
 #include "cmd.h"
-#include "../config/cfg.h"
+#include "../cfg.h"
 #include "../win/win.h"
+#include "../wm/wm.h"
 #include "../shm/shm_host.h"
 #include "../ipc/ipc.h"
 
+#include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
 
+//TODO:
+// variable resolution
 static int g_scr_w = 1280;
 static int g_scr_h = 720;
 
@@ -24,6 +28,8 @@ void cmd_set_screen_size(int w, int h)
 {
     g_scr_w = w;
     g_scr_h = h;
+
+    printf(":: cmd: set screensize, w: %d h: %d\n", g_scr_w, g_scr_h);
 }
 
 static int str_to_int(const char *s)
@@ -86,10 +92,7 @@ static void process_line(const char *line, cmd_result_t *result)
         int idx = win_add(pid, title, x, y, w, h, style);
 
         #if ENABLE_TILING
-            if (!(style & DT_POPUP) && !(style & DT_NOTITLE))
-            {
-                win_maximize(idx, g_scr_w, g_scr_h, TB_H);
-            }
+            win_retile_and_notify(g_scr_w, g_scr_h, TB_H);
         #endif
 
         win_focus(idx);
@@ -106,6 +109,9 @@ static void process_line(const char *line, cmd_result_t *result)
         if (idx >= 0) push_rect(result, win_get(idx));
         win_remove(pid);
         result->win_changed = 1;
+        #if ENABLE_TILING
+            win_retile_and_notify(g_scr_w, g_scr_h, TB_H);
+        #endif
 
     } else if (cmd == 'T')
     {

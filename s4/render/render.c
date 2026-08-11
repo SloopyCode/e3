@@ -10,9 +10,9 @@
 
 #include "render.h"
 #include "render_target.h"
-#include "../config/cfg.h"
+#include "../cfg.h"
 #include "../win/win.h"
-#include "../../../libs/libfont/libfont.h"
+#include "../fonts/fonts.h"
 
 #define ROW_MAX 4096
 static unsigned int row_buf[ROW_MAX];

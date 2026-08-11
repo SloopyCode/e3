@@ -9,6 +9,7 @@
  */
 
 #include "ipc.h"
+#include <stdio.h>
 #include <string.h>
 
 static int g_scr_w = 1280;
@@ -17,6 +18,7 @@ static int g_scr_h = 720;
 void ipc_init(void)
 {
     /* after eventfd is done*/
+    printf(":: init ipc\n");
 }
 
 void ipc_set_screen_size(int w, int h)

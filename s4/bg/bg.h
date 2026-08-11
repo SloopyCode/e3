@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "../config/cfg.h"
+#include "../cfg.h"
 #define BG_PATH SYSTEM "background/_1.bmp"
 
 void bg_init(int w, int h);

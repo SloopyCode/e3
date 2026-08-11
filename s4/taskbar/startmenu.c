@@ -9,7 +9,7 @@
  */
 #include "startmenu.h"
 #include "../compositor/comp.h"
-#include "../config/cfg.h"
+#include "../cfg.h"
 #include "../fonts/fonts.h"
 
 #include <stdio.h>

@@ -10,7 +10,7 @@
 
 #include "cursor.h"
 #include "../compositor/comp.h"
-#include "../config/cfg.h"
+#include "../cfg.h"
 
 #include <sys/fb.h>
 #include <unistd.h>

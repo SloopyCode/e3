@@ -15,7 +15,8 @@ ENTRY(
 	_start
 )
 PHDRS {
-	load PT_LOAD FLAGS(7);
+    text PT_LOAD FLAGS(5);
+    data PT_LOAD FLAGS(6);
 }
 SECTIONS
 {
@@ -23,30 +24,30 @@ SECTIONS
 
     .text :
     {
-    	*(.text._start)
-     	*(.text*)
-    } :load
+        *(.text._start)
+        *(.text*)
+    } :text
 
     .rodata :
     {
-    	*(.rodata*)
-    } :load
+        *(.rodata*)
+    } :text
 
     .data :
     {
-    	*(.data*)
-    } :load
+        *(.data*)
+    } :data
 
     .bss :
     {
-    	*(.bss*)
-     	*(COMMON)
-    } :load
+        *(.bss*)
+        *(COMMON)
+    } :data
 
     /DISCARD/ :
     {
-    	*(.eh_frame)
-     	*(.note*)
-      	*(.comment)
+        *(.eh_frame)
+        *(.note*)
+        *(.comment)
     }
 }

@@ -14,9 +14,13 @@
 #include "../ipc/ipc.h"
 #include "../taskbar/taskbar.h"
 #include "../taskbar/startmenu.h"
-#include "../config/cfg.h"
+#include "../cfg.h"
 
+#include <stdio.h>
 #include <unistd.h>
+
+#define KBD_MOD_SHIFT (1 << 0)
+#define KBD_MOD_CTRL (1 << 1)
 
 static int g_last_btn = 0;
 static int g_last_rbtn = 0;
@@ -56,6 +60,7 @@ drag_info_t g_input_drag_prev;
 static int g_scr_w = 1280, g_scr_h = 720;
 void input_set_screen_size(int w, int h)
 {
+	printf(":: input: set screensize, w: %d h: %d\n", w, h);
 	g_scr_w = w;
 	g_scr_h = h;
 }
@@ -123,6 +128,7 @@ static cur_type_t edge_to_cursor(int edge)
 
 void input_init(void)
 {
+	printf(":: init input system\n");
     g_last_btn = 0;
     g_drag_idx = -1;
     g_resize_idx = -1;
@@ -265,8 +271,8 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
                 }
             } else if (edge != RESIZE_NONE && !(win_get(top_idx) && (win_get(top_idx)->style & DT_NOMOVE) && edge == RESIZE_NONE))
             {
-            	#if DT_ENABLE_RESIZING
-                	// start resize
+                #if DT_ENABLE_RESIZING && !ENABLE_TILING
+                    // start resize
                     dt_win_t *wn = win_get(top_idx);
                     if (wn) {
                         g_resize_idx  = top_idx;
@@ -284,13 +290,15 @@ static int handle_one(mouse_state_t *ev, input_state_t *is)
                 #endif
             } else if (win_hit_title(top_idx, mx, my))
             {
-                dt_win_t *wn = win_get(top_idx);
-                if (wn && !(wn->style & DT_NOMOVE) && !(wn->style & DT_NOTITLE))
-                {
-                    g_drag_idx = top_idx;
-                    g_drag_ox  = mx - wn->x;
-                    g_drag_oy  = my - wn->y;
-                }
+                #if !ENABLE_TILING
+                    dt_win_t *wn = win_get(top_idx);
+                    if (wn && !(wn->style & DT_NOMOVE) && !(wn->style & DT_NOTITLE))
+                    {
+                        g_drag_idx = top_idx;
+                        g_drag_ox  = mx - wn->x;
+                        g_drag_oy  = my - wn->y;
+                    }
+                #endif
             }
         } else
         {
@@ -517,6 +525,29 @@ int input_drain_keyboard(int kfd)
         got = 1;
 
         if (ev.type != INPUT_EV_KEY) continue;
+
+        #if ENABLE_TILING
+            if (
+                ev.value != 0 &&
+                (ev.modifiers & KBD_MOD_SHIFT) &&
+                (ev.modifiers & KBD_MOD_CTRL)  &&
+                g_focused_pid > 0
+            ) {
+                int dx = 0, dy = 0;
+
+                if (ev.code == INPUT_KEY_LEFT) dx = -1;
+                else if (ev.code == INPUT_KEY_RIGHT) dx = 1;
+                else if (ev.code == INPUT_KEY_UP) dy = -1;
+                else if (ev.code == INPUT_KEY_DOWN) dy = 1;
+
+                if (dx != 0 || dy != 0)
+                {
+                    win_tile_move(g_focused_pid, dx, dy, g_scr_w, g_scr_h, TB_H);
+                    continue;
+                }
+            }
+        #endif
+
         if (g_focused_pid <= 0 || g_focused_idx < 0) continue;
 
         dt_win_t *fw = win_get(g_focused_idx);

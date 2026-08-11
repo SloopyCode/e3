@@ -11,7 +11,7 @@
 #include "entries.h"
 #include "../bg/bmp/bmp.h"
 #include "../bg/tga/tga.h"
-#include "../config/cfg.h"
+#include "../cfg.h"
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>

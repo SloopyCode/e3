@@ -15,6 +15,7 @@ CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector  \
           -fno-PIE -fno-pic -m64 -march=x86-64 -mno-red-zone          \
           -Wall -Wextra -std=gnu11 -D__sulfur__                       \
           -I$(LIBC)/include                                           \
+          -I../s4                                                     \
           -I.
 
 SRCS := libdesktop.c dt_ipc.c
