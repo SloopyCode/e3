@@ -1,12 +1,15 @@
 #pragma once
 #include "os.h"
 
+//#define ICONS SYSTEM "resources/icons/"
+#define ICONS SYSTEM "icons/"
+
 // scaling settings
 #define RENDERER_SCALING_ENABLED 0
 #define RENDERER_SUPERSAMPLING_FACTOR 2
 #define DARK_MODE 1
 #define DT_ENABLE_RESIZING 1
-#define ENABLE_TILING 1
+#define ENABLE_TILING 0
 
 #define DT_BG 0xFF008080u  // win95/98 teal ig its a fallback
 

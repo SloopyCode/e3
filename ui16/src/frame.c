@@ -17,4 +17,6 @@ void ui16_frame(void)
 
     ui16__computeLayout(ui16__targetBufferWidth(), ui16__targetBufferHeight(), renderer);
     ui16__renderTree(renderer);
+
+    ui16__inputEndFrame();
 }

@@ -40,14 +40,14 @@ static int file_exists(const char *filepath)
 
 static void launch_poweroff(void)
 {
-	printf(":: sm: launching poweroff...");
+    printf(":: sm: launching poweroff...\n\n");
     if (!file_exists(POWEROFF_LAUNCHPAD_PATH)) return;
     spawn(POWEROFF_LAUNCHPAD_PATH);
 }
 
 static void launch_reboot(void)
 {
-	printf(":: sm: launching reboot...");
+    printf(":: sm: launching reboot...\n\n");
     if (!file_exists(REBOOT_LAUNCHPAD_PATH)) return;
     spawn(REBOOT_LAUNCHPAD_PATH);
 }

@@ -2,6 +2,63 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#define DT_IPC_CMD_NAME "s4.desktop.command"
+#define DT_IPC_EVENT_PREFIX "s4.desktop.event."
+#define IPC_NONBLOCK 1
+
+static int kernel_ipc = -1;
+static int command_fd = -1;
+static int event_fd = -1;
+static pid_t event_pid = 0;
+
+static int ipc_available(void)
+{
+    /*if (kernel_ipc >= 0) return kernel_ipc;
+    command_fd = (int)ipc_open(DT_IPC_CMD_NAME);
+    kernel_ipc = command_fd >= 0;
+    return kernel_ipc;*/
+    return 0;
+}
+
+static void event_name(pid_t pid, char out[DT_IPC_PATH_MAX])
+{
+    int i = 0;
+    int j = 0;
+    const char *prefix = DT_IPC_EVENT_PREFIX;
+    char number[12];
+
+    while (prefix[i]) { out[i] = prefix[i]; i++; }
+    dt_ipc_itoa((int)pid, number);
+    while (number[j]) out[i++] = number[j++];
+
+    out[i] = '\0';
+}
+
+static int event_channel(pid_t pid, int create)
+{
+    if (event_fd >= 0 && event_pid == pid) return event_fd;
+
+    char name[DT_IPC_PATH_MAX];
+    event_name(pid, name);
+    event_fd = create ? (int)ipc_create(name) : (int)ipc_open(name);
+
+    if (event_fd >= 0) event_pid = pid;
+
+    return event_fd;
+}
+
+int dt_ipc_desktop_init(void)
+{
+    command_fd = (int)ipc_create(DT_IPC_CMD_NAME);
+    kernel_ipc = command_fd >= 0;
+    return kernel_ipc ? (int)ipc_eventfd(command_fd) : -1;
+}
+
+int dt_ipc_uses_kernel(void)
+{
+    return ipc_available();
+}
+
 void dt_ipc_itoa(int v, char *out)
 {
     char tmp[16];
@@ -74,12 +131,18 @@ void dt_ipc_path(dt_chan_t kind, pid_t pid, char out[DT_IPC_PATH_MAX])
 
 int dt_ipc_write(dt_chan_t kind, pid_t pid, const void *data, unsigned len)
 {
+    if (kind == DT_CHAN_INPUT && ipc_available())
+    {
+        int fd = event_channel(pid, 0);
+        if (fd >= 0) return (int)ipc_send(fd, data, len);
+    }
+
     char path[DT_IPC_PATH_MAX];
     dt_ipc_path(kind, pid, path);
 
     int fd = open(path, O_WRONLY | O_CREAT);
     if (fd < 0) return -1;
-
+    if (ftruncate(fd, 0) < 0) { close(fd); return -1; }
     int w = (int)write(fd, data, len);
     close(fd);
     return w;
@@ -87,6 +150,12 @@ int dt_ipc_write(dt_chan_t kind, pid_t pid, const void *data, unsigned len)
 
 int dt_ipc_read(dt_chan_t kind, pid_t pid, void *buf, unsigned max)
 {
+    if (kind == DT_CHAN_INPUT && ipc_available())
+    {
+        int fd = event_channel(pid, 1);
+        if (fd >= 0) return (int)ipc_recv(fd, buf, max, IPC_NONBLOCK);
+    }
+
     char path[DT_IPC_PATH_MAX];
     dt_ipc_path(kind, pid, path);
 
@@ -100,6 +169,12 @@ int dt_ipc_read(dt_chan_t kind, pid_t pid, void *buf, unsigned max)
 
 void dt_ipc_cmd_append(const char *line)
 {
+    if (ipc_available())
+    {
+        int len = 0;
+        while (line[len]) len++;
+        if (ipc_send(command_fd, line, (unsigned)len) >= 0) return;
+    }
     static char existing[4096];
     int elen = 0;
 
@@ -117,6 +192,8 @@ void dt_ipc_cmd_append(const char *line)
     fd = open(path, O_WRONLY | O_CREAT);
     if (fd < 0) return;
 
+    if (ftruncate(fd, 0) < 0) { close(fd); return; }
+
     if (elen > 0) write(fd, existing, (unsigned)elen);
 
     {
@@ -124,6 +201,21 @@ void dt_ipc_cmd_append(const char *line)
         while (line[llen]) llen++;
         write(fd, line, (unsigned)llen);
     }
+
+    close(fd);
+}
+
+void dt_ipc_cmd_clear(void)
+{
+    if (ipc_available()) return;
+
+    char path[DT_IPC_PATH_MAX];
+    dt_ipc_path(DT_CHAN_CMD, 0, path);
+
+    int fd = open(path, O_WRONLY | O_CREAT);
+    if (fd < 0) return;
+
+    ftruncate(fd, 0);
 
     close(fd);
 }

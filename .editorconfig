@@ -1,10 +1,12 @@
 root = true
 
 [*]
-indent_style = tab
+indent_style = space
+indent_size = 4
 trim_trailing_whitespaces = true
 insert_final_newline = false
 charset = utf-8
+hard_tabs = false
 
 [*.nix]
 indent_size = 2

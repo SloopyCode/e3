@@ -17,7 +17,8 @@ static int g_scr_h = 720;
 
 void ipc_init(void)
 {
-    /* after eventfd is done*/
+    int wakefd = dt_ipc_desktop_init();
+    (void)wakefd;
     printf(":: init ipc\n");
 }
 
@@ -32,6 +33,12 @@ void ipc_set_screen_size(int w, int h)
 void ipc_dispatch_event(pid_t focused_pid, const dt_event_t *ev)
 {
     if (focused_pid <= 0 || !ev) return;
+
+    if (dt_ipc_uses_kernel())
+    {
+        dt_ipc_write(DT_CHAN_INPUT, focused_pid, ev, sizeof(*ev));
+        return;
+    }
 
     static unsigned char raw[IPC_QUEUE_BYTES];
     int count = 0;

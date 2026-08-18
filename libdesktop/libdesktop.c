@@ -9,7 +9,6 @@
 
 #include "libdesktop.h"
 #include "dt_ipc.h"
-#include "../s4/os.h"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -27,6 +26,14 @@ static int _createWindow(
 	int h,
 	unsigned int style
 ) {
+    if (dt_ipc_uses_kernel())
+    {
+        char event_name[DT_IPC_PATH_MAX];
+        /* dt_ipc_read creates the client mailbox lazily before O is sent. */
+        (void)event_name;
+
+        dt_ipc_read(DT_CHAN_INPUT, getpid(), event_name, 0);
+    }
     char buf[256];
     dt_ipc_build_open_cmd(buf, sizeof(buf), getpid(), style, x, y, w, h, title);
     dt_ipc_cmd_append(buf);
@@ -36,10 +43,10 @@ static int _createWindow(
 static int _createPopup(int x, int y, int w, int h)
 {
     return _createWindow(
-    	"",
-     	x,
-      	y,
-       	w,
+        "",
+        x,
+        y,
+        w,
         h,
         DT_POPUP
     );
@@ -162,11 +169,11 @@ static unsigned int *_resizeFramebuffer(int w, int h)
     if (old_id)
     {
         shm_ioctl_args_t args =
-    	{
-	     	.id = old_id,
-		    .size = 0,
-		    .vaddr = (uint64_t)(unsigned long)old_ptr
-	    };
+        {
+            .id = old_id,
+            .size = 0,
+            .vaddr = (uint64_t)(unsigned long)old_ptr
+        };
         ioctl(s_shm_fd, SHM_IOCTL_UNMAP, &args);
     }
 
@@ -184,6 +191,18 @@ static void _presentFrame(void)
 static int _pollEvents(dt_event_t *buf, int max)
 {
     if (!buf || max <= 0) return 0;
+
+    if (dt_ipc_uses_kernel())
+    {
+        int count = 0;
+        while (count < max)
+        {
+            int n = dt_ipc_read(DT_CHAN_INPUT, getpid(), &buf[count], sizeof(dt_event_t));
+            if (n != (int)sizeof(dt_event_t)) break;
+            count++;
+        }
+        return count;
+    }
 
     unsigned char raw[sizeof(int) + sizeof(dt_event_t) * DT_EVENT_QUEUE_MAX];
 

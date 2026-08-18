@@ -33,54 +33,54 @@ void _itoa(int v, char *out)
 
 static void render_band(input_state_t *is)
 {
-	/*
-	 * RUBBERBAND FIX
-		* by @offihito
-	 */
-	if (!is->sel_active) return;
+    /*
+    * RUBBERBAND FIX
+        * by @offihito
+    */
+    if (!is->sel_active) return;
 
-	// compute actual rect (supports all drag directions)
-	int x0 = is->sel_x0 < is->sel_x1 ? is->sel_x0 : is->sel_x1;
-	int y0 = is->sel_y0 < is->sel_y1 ? is->sel_y0 : is->sel_y1;
-	int x1 = is->sel_x0 > is->sel_x1 ? is->sel_x0 : is->sel_x1;
-	int y1 = is->sel_y0 > is->sel_y1 ? is->sel_y0 : is->sel_y1;
-	int w = x1 - x0;
-	int h = y1 - y0;
+    // compute actual rect (supports all drag directions)
+    int x0 = is->sel_x0 < is->sel_x1 ? is->sel_x0 : is->sel_x1;
+    int y0 = is->sel_y0 < is->sel_y1 ? is->sel_y0 : is->sel_y1;
+    int x1 = is->sel_x0 > is->sel_x1 ? is->sel_x0 : is->sel_x1;
+    int y1 = is->sel_y0 > is->sel_y1 ? is->sel_y0 : is->sel_y1;
+    int w = x1 - x0;
+    int h = y1 - y0;
 
-	if (w < 2 || h < 2) return;
+    if (w < 2 || h < 2) return;
 
     rt_damage_mark(x0, y0, w + 1, h + 1);
 
     int sw = rt_width();
     int sh = rt_height();
 
-	for (int ry = y0 + 1; ry < y1 && ry < sh; ry++)
-	{
-		for (int rx = x0 + 1; rx < x1 && rx < sw; rx++)
-		{
-			unsigned int bg = rt_get(rx, ry);
-			unsigned int br = (bg >> 16) & 0xFF;
-			unsigned int bg2 = (bg >> 8) & 0xFF;
-			unsigned int bb = bg & 0xFF;
+    for (int ry = y0 + 1; ry < y1 && ry < sh; ry++)
+    {
+        for (int rx = x0 + 1; rx < x1 && rx < sw; rx++)
+        {
+            unsigned int bg = rt_get(rx, ry);
+            unsigned int br = (bg >> 16) & 0xFF;
+            unsigned int bg2 = (bg >> 8) & 0xFF;
+            unsigned int bb = bg & 0xFF;
 
-			br = (br * 4 + 128) / 5;
-			bg2 = (bg2 * 4 + 128) / 5;
-			bb = (bb * 4 + 128) / 5;
+            br = (br * 4 + 128) / 5;
+            bg2 = (bg2 * 4 + 128) / 5;
+            bb = (bb * 4 + 128) / 5;
 
-			rt_set(rx, ry, 0xFF000000u | (br << 16) | (bg2 << 8) | bb);
-		}
-	}
+            rt_set(rx, ry, 0xFF000000u | (br << 16) | (bg2 << 8) | bb);
+        }
+    }
 
-	// top and bottom edges
-	for (int rx = x0; rx <= x1 && rx < sw; rx++) {
-		if (y0 >= 0 && y0 < sh) rt_set(rx, y0, BAND_BORDER);
-		if (y1 >= 0 && y1 < sh) rt_set(rx, y1, BAND_BORDER);
-	}
-	// left and right edges
-	for (int ry = y0; ry <= y1 && ry < sh; ry++) {
-		if (x0 >= 0 && x0 < sw) rt_set(x0, ry, BAND_BORDER);
-		if (x1 >= 0 && x1 < sw) rt_set(x1, ry, BAND_BORDER);
-	}
+    // top and bottom edges
+    for (int rx = x0; rx <= x1 && rx < sw; rx++) {
+        if (y0 >= 0 && y0 < sh) rt_set(rx, y0, BAND_BORDER);
+        if (y1 >= 0 && y1 < sh) rt_set(rx, y1, BAND_BORDER);
+    }
+    // left and right edges
+    for (int ry = y0; ry <= y1 && ry < sh; ry++) {
+        if (x0 >= 0 && x0 < sw) rt_set(x0, ry, BAND_BORDER);
+        if (x1 >= 0 && x1 < sw) rt_set(x1, ry, BAND_BORDER);
+    }
 }
 
 int main(void)
@@ -88,8 +88,7 @@ int main(void)
     printf("\n:: starting s4 for " GREETING "...\n");
     printf(":: mkdir " DT_DIR "...\n");
     mkdir(DT_DIR, 0);
-
-    ipc_init();
+    mkdir(SYSTEM, 0);
 
     printf(":: reading framebuffer... (" FRAMEBUFFER_DEV ")\n");
     int fb = open(FRAMEBUFFER_DEV, O_RDWR);
@@ -97,12 +96,6 @@ int main(void)
     int mfd = open(MOUSE_DEV, O_RDONLY);
     printf(":: reading keyboard... (" KEYBOARD_DEV ")\n");
     int kfd = open(KEYBOARD_DEV, O_RDONLY);
-
-    printf("TEST A\n");
-    printf("TEST %d\n", 123);
-    printf("TEST %u\n", 123u);
-    printf("TEST %x\n", 123);
-    printf("TEST %s\n", "hello");
 
     if (fb < 0 || mfd < 0) return 1;
 
@@ -130,14 +123,12 @@ int main(void)
 
     printf(":: internal size: %d x %d\n", internal_w, internal_h);
 
-    shm_host_init();
-
     input_set_screen_size(internal_w, internal_h);
     cmd_set_screen_size(internal_w, internal_h);
     ipc_set_screen_size(internal_w, internal_h);
 
-    //shm_host_init();
-    //ipc_init();
+    shm_host_init();
+    ipc_init();
     input_init();
     comp_init(fb, internal_w, internal_h);
     bg_init(internal_w, internal_h);
@@ -151,6 +142,8 @@ int main(void)
         "loading s4 was a success!\n"
         "Welcome to s4!\n\n"
     );
+
+    ioctl(fb, FB_IOCTL_VT_DISABLE, 0);
 
     input_state_t is;
 

@@ -12,8 +12,9 @@ LD     := x86_64-elf-ld
 LIBC   ?= include/libc
 
 OS_PATH     ?= ~/sulfurLabs/sulfurOS/
-ROOTFS_PATH ?= $(OS_PATH)dsk/rd/system/desktop/
-OS_LIBS     ?= $(OS_PATH)/user/libs/
+OS_DSK_PATH ?= $(OS_PATH)dsk/
+ROOTFS_PATH ?= $(OS_DSK_PATH)rd/system/desktop/
+OS_LIBS     ?= $(OS_PATH)user/libs/
 LIBDESKTOP  := libdesktop/
 UI16 := ui16/
 
@@ -100,7 +101,7 @@ build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTO
 	@chmod +x tools/buildimage.sh
 	@./tools/buildimage.sh
 
-	@rm -f  $(ROOTFS_PATH)/s4.elf
+	@rm -f $(ROOTFS_PATH)/s4.elf
 	@mkdir -p $(OS_LIBS)$(UI16)
 	@mkdir -p $(OS_LIBS)$(LIBDESKTOP)
 	@cp build/s4.elf $(ROOTFS_PATH)desktop.elf
@@ -110,6 +111,7 @@ build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTO
 	@cp ui16/build/ui16.a $(OS_LIBS)$(UI16)ui16.a
 	@cp ui16/include/ui16.h $(OS_LIBS)$(UI16)ui16.h
 	@cp ui16/include/ui16buttons.h $(OS_LIBS)$(UI16)ui16buttons.h
+	@cp build/s4.cpio $(OS_DSK_PATH)rd/system/s4.cpio
 
 
 build/desktop.o:                    s4/desktop.c                   ; $(CC) $(CFLAGS) -c $< -o $@
@@ -148,5 +150,6 @@ clean:
 	rm -f build/*.o build/ipc/*.o build/wm/*.o build/compositor/*.o build/bg/*.o build/bg/bmp/*.o build/win/*.o build/cursor/*.o build/render/*.o build/input/*.o build/cmd/*.o build/fonts/* build/taskbar/*.o build/desktop.elf
 	@$(MAKE) -C ui16 clean
 	@$(MAKE) -C libdesktop clean
+	@$(MAKE) -C $(LIBC) clean
 
 .PHONY: all clean install run

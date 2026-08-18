@@ -18,7 +18,7 @@ CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector  \
           -Iinclude                                                   \
           -Isrc
 
-SRCS := src/tree.c src/style.c src/layout.c src/render.c src/frame.c src/widgets.c src/widgets_button.c src/font.c src/softrender.c src/generic.c
+SRCS := src/tree.c src/style.c src/layout.c src/render.c src/frame.c src/widgets.c src/widgets_button.c src/font.c src/softrender.c src/generic.c src/input.c src/keymap.c
 OBJS := $(SRCS:src/%.c=build/%.o)
 
 all: build/ui16.a

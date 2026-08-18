@@ -61,6 +61,9 @@ ui16_node_t *ui16__attachNode(ui16_node_kind_t node_kind, ui16_style_t node_styl
     new_node->box_y = 0;
     new_node->box_width = 0;
     new_node->box_height = 0;
+    new_node->natural_width = 0;
+    new_node->natural_height = 0;
+    new_node->line_index = 0;
 
     if (current_parent)
     {
@@ -95,6 +98,9 @@ ui16_node_t *ui16__setRootStyled(ui16_style_t root_style, unsigned int *target_b
     root_node->box_y = 0;
     root_node->box_width = 0;
     root_node->box_height = 0;
+    root_node->natural_width = 0;
+    root_node->natural_height = 0;
+    root_node->line_index = 0;
 
     current_parent = root_node;
 

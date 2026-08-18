@@ -25,7 +25,7 @@ static tb_widget_t s_entries[] =
         .name          = "login",
         .text          = "login",
         .exec          = SYSTEM "login.elf",
-        .icon_path     = SYSTEM "icons/exec.bmp",
+        .icon_path     = ICONS "exec.bmp",
         .icon          = { .loaded = 0 },
         .disp          = TB_DISP_ICON_ONLY,
         .popup_pid     = -1,
@@ -38,7 +38,7 @@ static tb_widget_t s_entries[] =
         .name          = "DOOM",
         .text          = "DOOM",
         .exec          = "/bin/doomgeneric.elf",
-        .icon_path     = SYSTEM "icons/doom.tga",
+        .icon_path     = ICONS "doom.tga",
         .icon          = { .loaded = 0 },
         .disp          = TB_DISP_ICON_ONLY,
         .popup_pid     = -1,
@@ -51,7 +51,7 @@ static tb_widget_t s_entries[] =
         .name          = "template",
         .text          = "ui16",
         .exec          = "/bin/template.elf",
-        .icon_path     = SYSTEM "icons/template.bmp",
+        .icon_path     = ICONS "template.bmp",
         .icon          = { .loaded = 0 },
         .disp          = TB_DISP_ICON_ONLY,
         .popup_pid     = -1,
@@ -64,7 +64,7 @@ static tb_widget_t s_entries[] =
         .name          = "welcome",
         .text          = "welcome",
         .exec          = "/system/desktop/welcome.elf",
-        .icon_path     = SYSTEM "icons/welcome.bmp",
+        .icon_path     = ICONS "welcome.bmp",
         .icon          = { .loaded = 0 },
         .disp          = TB_DISP_ICON_ONLY,
         .popup_pid     = -1,
@@ -119,7 +119,7 @@ void entries_load_icon(tb_widget_t *entry)
         snprintf(
             auto_path,
             sizeof(auto_path),
-            SYSTEM "icons/%s.tga",
+            ICONS "%s.tga",
             entry->name
         );
 
@@ -180,13 +180,13 @@ void entries_load_icon(tb_widget_t *entry)
 
     printf(":: icon: '%s': not found, trying exec.tga, then exec.bmp...\n\n", entry->name);
 
-    if (tga_load(SYSTEM "icons/exec.tga", &entry->icon.image) == 0)
+    if (tga_load(ICONS "exec.tga", &entry->icon.image) == 0)
     {
         entry->icon.loaded = 1;
         return;
     }
 
-    if (bmp_load(SYSTEM "icons/exec.bmp", &entry->icon.image) == 0)
+    if (bmp_load(ICONS "exec.bmp", &entry->icon.image) == 0)
     {
         entry->icon.loaded = 1;
         return;

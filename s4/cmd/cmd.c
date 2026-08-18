@@ -34,21 +34,42 @@ void cmd_set_screen_size(int w, int h)
 
 static int str_to_int(const char *s)
 {
-    int neg = 0, v = 0;
+    int neg = 0;
+    int v = 0;
+
     while (*s == ' ') s++;
-    if (*s == '-') { neg = 1; s++; }
+
+    if (*s == '-')
+    {
+        neg = 1;
+        s++;
+    }
+
     while (*s >= '0' && *s <= '9') v = v * 10 + (*s++ - '0');
+
     return neg ? -v : v;
+}
+
+static unsigned long long str_to_ull(const char *s)
+{
+    unsigned long long v = 0;
+
+    while (*s == ' ') s++;
+    while (*s >= '0' && *s <= '9') v = v * 10ULL + (unsigned long long)(*s++ - '0');
+
+    return v;
 }
 
 static const char *next_tok(const char **p)
 {
     static char tok[DT_TITLE_MAX];
     int i = 0;
+
     while (**p == ' ') (*p)++;
     while (**p && **p != ' ' && **p != '\n' && i < DT_TITLE_MAX - 1)
         tok[i++] = *(*p)++;
     tok[i] = '\0';
+
     return tok;
 }
 
@@ -109,6 +130,7 @@ static void process_line(const char *line, cmd_result_t *result)
         if (idx >= 0) push_rect(result, win_get(idx));
         win_remove(pid);
         result->win_changed = 1;
+
         #if ENABLE_TILING
             win_retile_and_notify(g_scr_w, g_scr_h, TB_H);
         #endif
@@ -139,12 +161,21 @@ static void process_line(const char *line, cmd_result_t *result)
     {
         // S <pid> <shm_id> <w> <h>
         pid_t pid = (pid_t)str_to_int(next_tok(&p));
-        unsigned long long shm_id = (unsigned long long)str_to_int(next_tok(&p));
+        unsigned long long shm_id = str_to_ull(next_tok(&p));
         int w = str_to_int(next_tok(&p));
         int h = str_to_int(next_tok(&p));
 
         unsigned int *mapped = shm_host_map(shm_id);
         if (mapped) win_set_shm_buffer(pid, shm_id, mapped, w, h);
+
+        printf(
+            ":: cmd: S pid=%d shm=%llu w=%d h=%d mapped=%p\n",
+            (int)pid,
+            shm_id,
+            w,
+            h,
+            mapped
+        );
     }
 }
 
@@ -160,13 +191,6 @@ void cmd_process(cmd_result_t *result)
     buf[n] = '\0';
     if (buf[0] == '\0') return;
 
-    {
-        char clr[4096];
-        int cnt = n < 4096 ? n : 4096;
-        for (int i = 0; i < cnt; i++) clr[i] = '\n';
-        dt_ipc_write(DT_CHAN_CMD, 0, clr, (unsigned)cnt);
-    }
-
     /* process*/
     const char *line = buf;
     while (*line)
@@ -175,6 +199,8 @@ void cmd_process(cmd_result_t *result)
         while (*line && *line != '\n') line++;
         if (*line == '\n') line++;
     }
+
+    dt_ipc_cmd_clear();
 }
 
 int cmd_check_dirty(void)

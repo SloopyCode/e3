@@ -16,7 +16,7 @@
 #define DT_CURSOR "/tmp/dt/cursor"
 
 #ifdef __sulfur__
-    #include <sys/sulfur.h>
+    #include <sys/sipc.h>
     #define GREETING "sulfurOS"
     #define SHM_DEV      "/dev/shm0"
     #define MOUSE_DEV    "/dev/mouse"
@@ -24,7 +24,7 @@
     #define FRAMEBUFFER_DEV "/dev/fb0"
 
     #define SYSTEM "/system/desktop/" //the path to the desktop in the system
-    #define CFGFILE   SYSTEM "desktop.conf"
+    #define CFGFILE   SYSTEM "desktop.ui16"
     #define ENTRYFILE SYSTEM "entries.json"
 #elif __nullos__
     #define GREETING "NullOS"
@@ -39,7 +39,7 @@
     #define FRAMEBUFFER_DEV "/dev/fb0"
 
     #define SYSTEM "/home/s4/" //the path to the desktop in the system
-    #define CFGFILE   SYSTEM "desktop.conf"
+    #define CFGFILE   SYSTEM "desktop.ui16"
     #define ENTRYFILE SYSTEM "entries.json"
 #elif __ascentos__
     #define GREETING "AscentOS"
@@ -49,7 +49,7 @@
     #define FRAMEBUFFER_DEV "/dev/fb0"
 
     #define SYSTEM "/system/desktop/"
-    #define CFGFILE   SYSTEM "desktop.conf"
+    #define CFGFILE   SYSTEM "desktop.ui16"
     #define ENTRYFILE SYSTEM "entries.json"
 #elif __linux__
     #define GREETING "Linux"
@@ -59,7 +59,7 @@
     #define FRAMEBUFFER_DEV "/dev/fb0"
 
     #define SYSTEM "/system/desktop/"
-    #define CFGFILE   SYSTEM "desktop.conf"
+    #define CFGFILE   SYSTEM "desktop.ui16"
     #define ENTRYFILE SYSTEM "entries.json"
 #elif __has_include
     // idfk if this works... rn i cant test it cuz doccrOS isnt finished
@@ -73,7 +73,7 @@
             #define FRAMEBUFFER_DEV "/dev/fb0"
 
             #define SYSTEM "/emr/system/desktop/"
-            #define CFGFILE   SYSTEM "desktop.conf"
+            #define CFGFILE   SYSTEM "desktop.exui"
             #define ENTRYFILE SYSTEM "entries.json"
         #endif
     #endif
