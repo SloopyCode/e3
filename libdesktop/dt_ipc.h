@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Copyright (c) 2026 sulfurLabs
+ *
+ * PROJECT: s4
+ * FILE: dt_ipc.h
+ */
+
 #pragma once
 
 #include <sys/types.h>

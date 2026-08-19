@@ -17,12 +17,14 @@ ROOTFS_PATH ?= $(OS_DSK_PATH)rd/system/desktop/
 OS_LIBS     ?= $(OS_PATH)user/libs/
 LIBDESKTOP  := libdesktop/
 UI16 := ui16/
+LIBPSF := libpsf/
 
-CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector     \
-          -fno-PIE -fno-pic -m64 -march=x86-64 -mno-sse -mno-sse2        \
-          -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11 -D__sulfur__ -O2\
-          -I$(LIBC)/include                                              \
-          -I$(LIBDESKTOP)
+CFLAGS := -ffreestanding -nostdlib -fno-builtin -fno-stack-protector       \
+          -fno-PIE -fno-pic -m64 -march=x86-64 -mno-sse -mno-sse2          \
+          -mno-mmx -mno-red-zone -Wall -Wextra -std=gnu11 -D__sulfur__ -O2 \
+          -I$(LIBC)/include                                                \
+          -I$(LIBDESKTOP)                                                  \
+          -I$(LIBPSF)
 
 LDFLAGS := -nostdlib -static -no-pie -T user.ld
 
@@ -84,9 +86,13 @@ run:
 	@echo "running OS..."
 	cd $(OS_PATH) && make run
 
-build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTOP)/build/libdesktop.a
+build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTOP)/build/libdesktop.a $(LIBPSF)/build/psf.a
+	@echo "building libpsf now..."
+	@$(MAKE) -C libpsf
+	@echo "libpsf was succesfully built!"
+
 	@echo "Building s4 now..."
-	$(LD) $(LDFLAGS) $(LIBC)/build/crt0.o $(OBJS) $(LIBDESKTOP)/build/libdesktop.a $(LIBC)/build/libc.a -o $@
+	$(LD) $(LDFLAGS) $(LIBC)/build/crt0.o $(OBJS) $(LIBDESKTOP)/build/libdesktop.a $(LIBPSF)/build/psf.a $(LIBC)/build/libc.a -o $@
 	@echo "s4 was succesfully built!"
 
 	@echo "building libdesktop now..."
@@ -104,6 +110,7 @@ build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTO
 	@rm -f $(ROOTFS_PATH)/s4.elf
 	@mkdir -p $(OS_LIBS)$(UI16)
 	@mkdir -p $(OS_LIBS)$(LIBDESKTOP)
+	@mkdir -p $(OS_LIBS)$(LIBPSF)
 	@cp build/s4.elf $(ROOTFS_PATH)desktop.elf
 	@cp libdesktop/build/libdesktop.a $(OS_LIBS)$(LIBDESKTOP)libdesktop.a
 	@cp libdesktop/libdesktop.h $(OS_LIBS)$(LIBDESKTOP)libdesktop.h
@@ -111,6 +118,8 @@ build/s4.elf: dirs $(OBJS) $(LIBC)/build/crt0.o $(LIBC)/build/libc.a $(LIBDESKTO
 	@cp ui16/build/ui16.a $(OS_LIBS)$(UI16)ui16.a
 	@cp ui16/include/ui16.h $(OS_LIBS)$(UI16)ui16.h
 	@cp ui16/include/ui16buttons.h $(OS_LIBS)$(UI16)ui16buttons.h
+	@cp libpsf/psf.h $(OS_LIBS)$(LIBPSF)psf.h
+	@cp libpsf/build/psf.a $(OS_LIBS)$(LIBPSF)psf.a
 	@cp build/s4.cpio $(OS_DSK_PATH)rd/system/s4.cpio
 
 
@@ -142,6 +151,9 @@ $(LIBC)/build/crt0.o $(LIBC)/build/libc.a:
 
 $(LIBDESKTOP)/build/libdesktop.a:
 	$(MAKE) -C $(LIBDESKTOP)
+
+$(LIBPSF)/build/psf.a:
+	$(MAKE) -C $(LIBPSF)
 
 $(UI16)/build/ui16.a:
 	$(MAKE) -C $(UI16)

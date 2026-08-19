@@ -111,6 +111,7 @@ static void process_line(const char *line, cmd_result_t *result)
         title[ti] = '\0';
 
         int idx = win_add(pid, title, x, y, w, h, style);
+        //printf(":: cmd: O pid=%d idx=%d x=%d y=%d w=%d h=%d title='%s'\n", (int)pid, idx, x, y, w, h, title);
 
         #if ENABLE_TILING
             win_retile_and_notify(g_scr_w, g_scr_h, TB_H);
@@ -168,14 +169,14 @@ static void process_line(const char *line, cmd_result_t *result)
         unsigned int *mapped = shm_host_map(shm_id);
         if (mapped) win_set_shm_buffer(pid, shm_id, mapped, w, h);
 
-        printf(
+        /*printf(
             ":: cmd: S pid=%d shm=%llu w=%d h=%d mapped=%p\n",
             (int)pid,
             shm_id,
             w,
             h,
             mapped
-        );
+        );*/
     }
 }
 

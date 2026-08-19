@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Copyright (c) 2026 sulfurLabs
+ *
+ * PROJECT: s4
+ * FILE: dt_ipc.c
+ */
+
 #include "dt_ipc.h"
 #include <fcntl.h>
 #include <unistd.h>
@@ -13,11 +22,11 @@ static pid_t event_pid = 0;
 
 static int ipc_available(void)
 {
-    /*if (kernel_ipc >= 0) return kernel_ipc;
+    if (kernel_ipc >= 0) return kernel_ipc;
     command_fd = (int)ipc_open(DT_IPC_CMD_NAME);
     kernel_ipc = command_fd >= 0;
-    return kernel_ipc;*/
-    return 0;
+    return kernel_ipc;
+    //return 0;
 }
 
 static void event_name(pid_t pid, char out[DT_IPC_PATH_MAX])
@@ -144,6 +153,7 @@ int dt_ipc_write(dt_chan_t kind, pid_t pid, const void *data, unsigned len)
     if (fd < 0) return -1;
     if (ftruncate(fd, 0) < 0) { close(fd); return -1; }
     int w = (int)write(fd, data, len);
+
     close(fd);
     return w;
 }
@@ -154,6 +164,22 @@ int dt_ipc_read(dt_chan_t kind, pid_t pid, void *buf, unsigned max)
     {
         int fd = event_channel(pid, 1);
         if (fd >= 0) return (int)ipc_recv(fd, buf, max, IPC_NONBLOCK);
+    }
+
+    if (kind == DT_CHAN_CMD && ipc_available())
+    {
+        unsigned total = 0;
+
+        for (;;)
+        {
+            int n = (int)ipc_recv(command_fd, (unsigned char *)buf + total, max - total, IPC_NONBLOCK);
+            if (n <= 0) break;
+
+            total += (unsigned)n;
+            if (total >= max) break;
+        }
+
+        return (int)total;
     }
 
     char path[DT_IPC_PATH_MAX];

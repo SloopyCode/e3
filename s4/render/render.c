@@ -13,6 +13,7 @@
 #include "../cfg.h"
 #include "../win/win.h"
 #include "../fonts/fonts.h"
+#include <stdint.h>
 
 #define ROW_MAX 4096
 static unsigned int row_buf[ROW_MAX];
@@ -32,9 +33,12 @@ static unsigned int stripe(int y, int focused)
     #endif
 }
 
-static void buf_char(int bx, char c, unsigned int fg, unsigned int bg, int frow)
+static void buf_char(int bx, char c, unsigned int fg, unsigned int bg, int frow, int char_w)
 {
-    uint16_t bits = font_glyph(FONT8X12_BOLD, (unsigned char)c & 0x7Fu, frow);
+    uint16_t bits = fonts_deco_loaded()
+        ? fonts_deco_glyph_row((unsigned char)c, frow)
+        : (uint32_t)font_glyph(FONT8X12_BOLD, (unsigned char)c & 0x7Fu, frow)
+    ;
 
     for (int col = 0; col < DT_FW; col++)
     {
@@ -46,13 +50,13 @@ static void buf_char(int bx, char c, unsigned int fg, unsigned int bg, int frow)
 /*writes string into row_buf  */
 static void buf_str_clamped(
     int bx, int maxw, const char *s,
-    unsigned int fg, unsigned int bg, int frow
+    unsigned int fg, unsigned int bg, int frow, int char_w
 ) {
     int px = bx;
     while (*s)
     {
         if (px - bx >= maxw) break;
-        buf_char(px, *s++, fg, bg, frow);
+        buf_char(px, *s++, fg, bg, frow, char_w);
         px += DT_FW;
     }
 }
@@ -131,6 +135,9 @@ void render_win(dt_win_t *w, int mx, int my)
     int wx = w->x, wy = w->y;
     int ww = w->w, wh = w->h;
 
+    int deco_fw = fonts_deco_loaded() ? fonts_deco_w() : DT_FW;
+    int deco_fh = fonts_deco_loaded() ? fonts_deco_h() : DT_FH;
+
     int focused = w->focused;
 
     unsigned int style = w->style;
@@ -175,7 +182,7 @@ void render_win(dt_win_t *w, int mx, int my)
     }
 
     //int has_title = !(style & DT_NOTITLE);
-    int tw = slen(w->title) * DT_FW;
+    int tw = slen(w->title) * deco_fw;
     int tx = (ww - tw) / 2;
 
     int deco_end = DT_MIN_X + DT_MIN_SZ;
@@ -215,7 +222,7 @@ void render_win(dt_win_t *w, int mx, int my)
 
             if (ww - 2 < ROW_MAX) row_buf[ww - 2] = row_buf[ww - 1] = WIN_BLACK;
 
-            if (frow >= 0 && frow < DT_FH) buf_str_clamped(tx, tw + DT_FW, w->title, DT_TITLE_TXT, title_bg, frow);
+            if (frow >= 0 && frow < DT_FH) buf_str_clamped(tx, tw + DT_FW, w->title, DT_TITLE_TXT, title_bg, frow, deco_fw);
 
             // close button
             {

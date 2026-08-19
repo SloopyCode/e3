@@ -17,6 +17,9 @@
 #include "cmd/cmd.h"
 #include "ipc/ipc.h"
 #include "wm/wm.h"
+#include "fonts/fonts.h"
+
+#include "../libpsf/psf.h"
 
 #include <sys/fb.h>
 #include <sys/input.h>
@@ -135,6 +138,8 @@ int main(void)
     cur_init(fb, internal_w, internal_h);
     taskbar_init(internal_w, internal_h);
 
+    fonts_deco_load("/system/fonts/ter-powerline-v14n.psf");
+
     bg_draw_full();
     comp_flush();
 
@@ -208,7 +213,7 @@ int main(void)
         input_drain_keyboard(kfd);
 
         int struct_changed = cr.win_changed || is.win_changed;
-        if (is.win_changed)
+        if (cr.win_changed || is.win_changed)
         {
             need_full = 1;
             is.win_changed = 0;
