@@ -34,8 +34,15 @@ typedef enum
 {
     UI16_FONT_INHERIT,
     UI16_FONT_REGULAR,
-    UI16_FONT_BOLD
+    UI16_FONT_BOLD,
+    UI16_FONT_PSF
 } ui16_font_kind_t;
+
+typedef struct
+{
+    ui16_font_kind_t kind;
+    const char *path;
+} ui16_font_t;
 
 typedef enum
 {
@@ -83,7 +90,7 @@ typedef struct
     unsigned int border_color;
 
     ui16_layout_kind_t layout;
-    ui16_font_kind_t font;
+    ui16_font_t font;
 
     ui16_align_t align_items;
     ui16_justify_t justify_content;
@@ -163,7 +170,7 @@ typedef struct
         int  int_value;
 
         ui16_layout_kind_t layout_value;
-        ui16_font_kind_t font_value;
+        ui16_font_t font_value;
         ui16_align_t align_value;
         ui16_justify_t  justify_value;
         ui16_position_t position_value;
@@ -202,7 +209,10 @@ ui16_style_t ui16__applyMods(ui16_style_t base_style, const ui16_style_mod_t *mo
 #define border(width_arg, color_arg) border_width(width_arg), border_color(color_arg)
 
 #define layout(layout_arg) ((ui16_style_mod_t){ UI16_MOD_LAYOUT, .data.layout_value = (layout_arg) })
-#define font(font_arg) ((ui16_style_mod_t){ UI16_MOD_FONT, .data.font_value = (font_arg) })
+#define font(v) ((ui16_style_mod_t){ UI16_MOD_FONT, .data.font_value = (v) })
+
+// font modes like psf (in future maybe ttf ._. )
+#define fontPsf(path_arg) ((ui16_font_t){ UI16_FONT_PSF, (path_arg) })
 
 #define align_items(v) ((ui16_style_mod_t){ UI16_MOD_ALIGN_ITEMS, .data.align_value = (v) })
 #define justify_content(v) ((ui16_style_mod_t){ UI16_MOD_JUSTIFY_CONTENT, .data.justify_value = (v) })
@@ -224,9 +234,9 @@ ui16_style_t ui16__applyMods(ui16_style_t base_style, const ui16_style_mod_t *mo
 #define row    UI16_LAYOUT_ROW
 #define column UI16_LAYOUT_COLUMN
 
-#define fontInherit UI16_FONT_INHERIT
-#define fontRegular UI16_FONT_REGULAR
-#define fontBold    UI16_FONT_BOLD
+#define fontInherit ((ui16_font_t){ UI16_FONT_INHERIT, 0 })
+#define fontRegular ((ui16_font_t){ UI16_FONT_REGULAR, 0 })
+#define fontBold    ((ui16_font_t){ UI16_FONT_BOLD, 0 })
 
 #define alignStart   UI16_ALIGN_START
 #define alignCenter  UI16_ALIGN_CENTER

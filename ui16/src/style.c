@@ -156,11 +156,12 @@ ui16_style_t ui16__applyMods(ui16_style_t base_style, const ui16_style_mod_t *mo
     return result_style;
 }
 
-ui16_font_kind_t ui16__resolveFont(ui16_node_t *node)
+ui16_font_t ui16__resolveFont(ui16_node_t *node)
 {
     for (ui16_node_t *current_node = node; current_node; current_node = current_node->parent)
     {
-        if (current_node->style.font != UI16_FONT_INHERIT) return current_node->style.font;
+        if (current_node->style.font.kind != UI16_FONT_INHERIT)
+            return current_node->style.font;
     }
 
     return ui16__genericStyle().font;

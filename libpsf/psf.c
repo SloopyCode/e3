@@ -45,7 +45,7 @@ static uint32_t utf8_decode(const uint8_t *buf, uint32_t len, uint32_t *pos)
         return b0;
     }
 
-    if ((b0 = 0xE0) == 0xC0 && *pos + 1 < len)
+    if ((b0 & 0xE0) == 0xC0 && *pos + 1 < len)
     {
         uint32_t cp = ((uint32_t)(b0 & 0x1F) << 6) | (buf[*pos + 1] & 0x3F);
 
@@ -117,7 +117,6 @@ static void parse_unicode_table(psf_font_t *font, const uint8_t *table, uint32_t
     uint32_t pos = 0;
     uint32_t glyph = 0;
     uint32_t cap = 0;
-    int skip = 0;
 
     font->unicode_entries = NULL;
     font->unicode_entry_count = 0;
@@ -130,35 +129,36 @@ static void parse_unicode_table(psf_font_t *font, const uint8_t *table, uint32_t
         {
             pos++;
             glyph++;
-            skip = 0;
             continue;
         }
         if (b == 0xFE)
         {
             pos++;
-            skip = 1;
-
             continue;
         }
 
         uint32_t cp = utf8_decode(table, size, &pos);
-        if (!skip) add_unicode_entry(font, &cap, cp, glyph);
+
+        if (add_unicode_entry(font, &cap, cp, glyph) != 0)
+        {
+            break;
+        }
     }
 }
 
 int psf_load(const char *path, psf_font_t *font)
 {
-    printf("test0");
+    //printf("\n\ntest0\n\n");
     if (!path)
     {
-        printf("test1");
+        //printf("test1");
 
         return -1;
     }
 
     if (!font)
     {
-        printf("test2");
+        //printf("test2");
 
         return -1;
     }
@@ -178,15 +178,15 @@ int psf_load(const char *path, psf_font_t *font)
     int fd = (int)open(path, O_RDONLY);
     if (fd < 0) return -1;
 
-    uint32_t glyph_data_size = hdr.numglyph * hdr.bytesperglyph;
-    uint8_t *glyphs = (uint8_t *)malloc(glyph_data_size);
-
     if (read(fd, &hdr, sizeof(hdr)) != (long)sizeof(hdr))
     {
-        printf("test3");
+        //printf("test3");
         close(fd);
         return -1;
     }
+
+    uint32_t glyph_data_size = hdr.numglyph * hdr.bytesperglyph;
+    uint8_t *glyphs = (uint8_t *)malloc(glyph_data_size);
 
     if (
         hdr.magic[0] != PSF2_MAGIC0  ||
@@ -197,7 +197,7 @@ int psf_load(const char *path, psf_font_t *font)
         // its either not even a psf file or its psf
         // type 1 which we cannot parse (cuz the desktop deosnt need it)
 
-        printf("test4");
+        //printf("test4");
         close(fd);
         return -1;
     }
@@ -207,30 +207,30 @@ int psf_load(const char *path, psf_font_t *font)
         hdr.height == 0 ||
         hdr.numglyph == 0
     ) {
-        printf("test4");
+        //printf("test4");
         close(fd);
         return -1;
     }
 
     if (lseek(fd, (long)hdr.headersize, SEEK_SET) < 0)
     {
-        printf("test5");
+        //printf("test5");
         close(fd);
         return -1;
     }
 
     if (!glyphs)
     {
-        printf("test6");
+        //printf("test6");
         close(fd);
         return -1;
     }
 
     if (read(fd, glyphs, glyph_data_size) != (long)glyph_data_size)
     {
-        printf("test7");
+        //printf("test7");
         free(glyphs);
-        printf("test8");
+        //printf("test8");
         close(fd);
 
         return -1;
@@ -239,6 +239,7 @@ int psf_load(const char *path, psf_font_t *font)
     font->version = hdr.version;
     font->glyph_count = hdr.numglyph;
     font->bytes_per_glyph = hdr.bytesperglyph;
+    font->bytes_per_row = (hdr.width + 7) / 8;
     font->height = hdr.height;
     font->width = hdr.width;
     font->glyphs = glyphs;
@@ -265,7 +266,7 @@ int psf_load(const char *path, psf_font_t *font)
         }
     }
 
-    printf("test9");
+    //printf("test9");
     close(fd);
     return 0;
 }
@@ -319,6 +320,8 @@ int psf_get_pixel(const psf_font_t *font, uint32_t glyph_index, int x, int y)
 uint32_t psf_glyph_row_bits(const psf_font_t *font, uint32_t glyph_index, int row)
 {
     if (!font) return 0;
+    if (glyph_index >= font->glyph_count) return 0;
+    if (row < 0 || row >= (int)font->height) return 0;
 
     int w = (int)font->width;
     if (w > 32) w = 32;
@@ -327,7 +330,7 @@ uint32_t psf_glyph_row_bits(const psf_font_t *font, uint32_t glyph_index, int ro
 
     for (int x = 0; x < w; x++)
     {
-        if (psf_get_pixel(font, glyph_index, x, row)) bits |= (1u << x);
+        if (psf_get_pixel(font, glyph_index, x, row)) bits |= 1u << x;
     }
 
     return bits;

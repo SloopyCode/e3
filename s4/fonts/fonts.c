@@ -42,6 +42,7 @@ uint32_t fonts_deco_glyph_row(unsigned int codepoint, int row)
     if (!g_deco_loaded) return 0;
 
     int gi = psf_glyph_index(&g_deco_font, codepoint);
+    if (gi < 0) return 0;
 
     return psf_glyph_row_bits(&g_deco_font, (uint32_t)gi, row);
 }

@@ -70,7 +70,7 @@ static void ui16__setPixel(int x, int y, unsigned int color)
     target_buffer[y * target_buffer_width + x] = color;
 }
 
-static void ui16__softwareDrawText(int x, int y, const char *text, unsigned int color, ui16_font_kind_t font)
+static void ui16__softwareDrawText(int x, int y, const char *text, unsigned int color, ui16_font_t font)
 {
     if (!target_buffer) return;
 
@@ -97,7 +97,7 @@ static void ui16__softwareDrawText(int x, int y, const char *text, unsigned int 
     }
 }
 
-static void ui16__softwareMeasureText(const char *text, ui16_font_kind_t font, int *out_width, int *out_height)
+static void ui16__softwareMeasureText(const char *text, ui16_font_t font, int *out_width, int *out_height)
 {
     (void)font;
 

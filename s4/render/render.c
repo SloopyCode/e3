@@ -35,12 +35,12 @@ static unsigned int stripe(int y, int focused)
 
 static void buf_char(int bx, char c, unsigned int fg, unsigned int bg, int frow, int char_w)
 {
-    uint16_t bits = fonts_deco_loaded()
+    uint32_t bits = fonts_deco_loaded()
         ? fonts_deco_glyph_row((unsigned char)c, frow)
         : (uint32_t)font_glyph(FONT8X12_BOLD, (unsigned char)c & 0x7Fu, frow)
     ;
 
-    for (int col = 0; col < DT_FW; col++)
+    for (int col = 0; col < char_w; col++)
     {
         int dx = bx + col;
         if (dx >= 0 && dx < ROW_MAX) row_buf[dx] = (bits & (1u << col)) ? fg : bg;

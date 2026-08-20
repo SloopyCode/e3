@@ -13,6 +13,7 @@
 
 #define DT_BG 0xFF008080u  // win95/98 teal ig its a fallback
 
+#define WINDOW_TITLE_FONT "/system/fonts/ter-powerline-v12n.psf"
 
 // rubber band selection colors
 #define BAND_BORDER 0xCCA8A5A5u   // border
@@ -41,6 +42,11 @@
     // minimum window size
     #define WIN_MIN_W 120
     #define WIN_MIN_H 60
+
+    // titlebar config
+    #define DT_TITLE_H  26 // tot. inc. high
+    #define DT_TITLE_PB 6  // pad. top
+    #define DT_BORDER   2  // border width
 #else
     // taskbar
     #define TB_H 40
@@ -59,6 +65,11 @@
     // minimum window size
     #define WIN_MIN_W 80
     #define WIN_MIN_H 40
+
+    // titlebar config
+    #define DT_TITLE_H  21 // tot. inc. high
+    #define DT_TITLE_PB 5  // pad. top
+    #define DT_BORDER   1  // border width
 #endif
 
 #define POWEROFF_LAUNCHPAD_PATH "/bin/poweroff.elf"
@@ -119,11 +130,6 @@
 #define DT_TITLE_INA 0xFF808080u  // grey ; when unfocused
 //#define DT_TITLE_INA 0xFF4F2F3Fu //red
 #define DT_TITLE_TXT 0xFFFFFFFFu  // text of titlebar
-
-// titlebar config
-#define DT_TITLE_H  21 // tot. inc. high
-#define DT_TITLE_PB 5  // pad. top
-#define DT_BORDER   1  // border width
 
 #define DT_CLOSE_X  5  // x offset
 #define DT_CLOSE_Y  5  // y offset

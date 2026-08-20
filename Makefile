@@ -66,6 +66,7 @@ fetchDeps:
 dirs:
 	mkdir -p libdesktop/build
 	mkdir -p ui16/build
+	mkdir -p libpsf/build
 
 	mkdir -p build
 	mkdir -p build/ipc
@@ -162,6 +163,7 @@ clean:
 	rm -f build/*.o build/ipc/*.o build/wm/*.o build/compositor/*.o build/bg/*.o build/bg/bmp/*.o build/win/*.o build/cursor/*.o build/render/*.o build/input/*.o build/cmd/*.o build/fonts/* build/taskbar/*.o build/desktop.elf
 	@$(MAKE) -C ui16 clean
 	@$(MAKE) -C libdesktop clean
+	@$(MAKE) -C libpsf clean
 	@$(MAKE) -C $(LIBC) clean
 
 .PHONY: all clean install run

@@ -138,7 +138,7 @@ int main(void)
     cur_init(fb, internal_w, internal_h);
     taskbar_init(internal_w, internal_h);
 
-    fonts_deco_load("/system/fonts/ter-powerline-v14n.psf");
+    fonts_deco_load(WINDOW_TITLE_FONT);
 
     bg_draw_full();
     comp_flush();
